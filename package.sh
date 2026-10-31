@@ -110,6 +110,30 @@ debugfs -w -R "write $ROOT/config/rootfs/10-ethernet.network /etc/systemd/networ
 debugfs -w -R "write $ROOT/config/rootfs/onecloud-modules.conf /etc/modules-load.d/onecloud.conf" \
     "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null
 
+# Drop the HDMI bring-up hooks used by older debug images and install the
+# permanent watchdog configuration instead.
+for f in /etc/modprobe.d/blacklist-hdmi.conf \
+         /etc/systemd/system/hdmi-try.service \
+         /etc/systemd/system/multi-user.target.wants/hdmi-try.service \
+         /root/hdmi-try.sh /var/lib/hdmi-try.state; do
+    debugfs -w -R "rm $f" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1 || true
+done
+if ! debugfs -R 'stat /etc/systemd/system.conf.d' "$ROOT/rootfs/onecloud-rootfs.ext4" 2>/dev/null | grep -q 'Inode:'; then
+    debugfs -w -R 'mkdir /etc/systemd/system.conf.d' "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null
+fi
+debugfs -w -R "rm /etc/systemd/system.conf.d/watchdog.conf" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1 || true
+debugfs -w -R "write $ROOT/config/rootfs/watchdog.conf /etc/systemd/system.conf.d/watchdog.conf" \
+    "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null
+
+# Install the permanent HDMI module loader (the modules-load.d entry loads
+# the stack early; this service is an idempotent fallback for deferred probes).
+debugfs -w -R "rm /etc/systemd/system/hdmi-load.service" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1 || true
+debugfs -w -R "write $ROOT/config/rootfs/hdmi-load.service /etc/systemd/system/hdmi-load.service" \
+    "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null
+debugfs -w -R "rm /etc/systemd/system/multi-user.target.wants/hdmi-load.service" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1 || true
+debugfs -w -R "symlink /etc/systemd/system/multi-user.target.wants/hdmi-load.service ../hdmi-load.service" \
+    "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1 || true
+
 # ---- boot partition --------------------------------------------------------
 echo "preparing boot partition"
 rm -f "$ROOT/rootfs/onecloud-boot.vfat"

@@ -1,0 +1,15 @@
+[Unit]
+Description=Ensure Meson8b HDMI display modules are loaded
+After=systemd-modules-load.service
+Wants=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/modprobe display-connector
+ExecStart=/sbin/modprobe phy-meson8-hdmi-tx
+ExecStart=/sbin/modprobe meson-transwitch-hdmi
+ExecStart=/sbin/modprobe meson-drm
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

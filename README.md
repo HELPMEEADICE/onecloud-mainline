@@ -4,11 +4,13 @@
 Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、根文件系统定制脚本、
 打包/校验脚本，以及完整的构建与刷机文档。
 
-> 当前状态：已在真实玩客云上验证 7.3.1 启动、eMMC 根文件系统、千兆以太网和
-> Mali-450 GPU（lima 驱动 + Mesa）。HDMI 显示输出仍未启用。
+> 当前状态：已在真实玩客云上验证 7.3.1 启动、eMMC 根文件系统、千兆以太网、
+> Mali-450 GPU（lima 驱动 + Mesa）以及 HDMI 显示输出（1920x1080 framebuffer
+> console，颜色正常）。
 > 已修复的启动/驱动阻断点：DTS 的 `/memory` 节点名（U-Boot 2011.03
-> 内存 fixup 兼容性）、`uImage` 头部加载地址（与 Armbian 基线一致），以及
-> 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载。
+> 内存 fixup 兼容性）、`uImage` 头部加载地址（与 Armbian 基线一致）、
+> 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载，
+> 以及 HDMI 移植中的 HHI `ranges`、DRM bridge 分配 API 和 HHI 可选访问问题。
 > 详见 [BUILD_REPORT.md](BUILD_REPORT.md)。
 
 ## 文档
@@ -64,6 +66,32 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
   在 GCC 15 下可构建。注意：GCC15 重编的 SPL/DDR 初始化在实机上不可靠，
   实验镜像只替换 U-Boot proper payload，SPL/DDR 仍使用 Armbian 基线。
 
+## HDMI 显示（Meson8b VPU + TranSwitch HDMI TX）
+
+- 设备树新增 `vpu@100000`（`amlogic,meson8b-vpu`）、`hdmi-tx@42000`
+  （`amlogic,meson8b-hdmi-tx`）、`hdmi-phy@3a0`
+  （`amlogic,meson8b-hdmi-tx-phy`）和 `hdmi-connector`，补丁为
+  `patches/0003-drm-meson-add-Meson8b-VPU-HDMI-support.patch`。
+- 内核启用 `CONFIG_DRM_MESON=m`、`CONFIG_DRM_MESON_TRANSWITCH_HDMI=m`、
+  `CONFIG_PHY_MESON8_HDMI_TX=m`、`CONFIG_MESON_CANVAS=m` 和
+  `CONFIG_DRM_DISPLAY_CONNECTOR=m`。启动后生成 `/dev/dri/card1` 和
+  `card1-HDMI-A-1`，framebuffer console 输出 1920x1080。
+- HDMI 模块由 `/etc/modules-load.d/onecloud.conf` 在开机时加载，
+  `hdmi-load.service` 作为 deferred-probe 的兜底再次 `modprobe`；
+  两处都是幂等的。模块加载顺序为 `display-connector` →
+  `phy-meson8-hdmi-tx` → `meson-transwitch-hdmi` → `meson-drm`。
+- 实机验证：HDMI 热插拔检测为 `connected`，EDID 可读，1920x1080
+  framebuffer console 画面和颜色正常。S805 的 HDMI PHY 上限约 1.65 GHz，
+  因此不支持 4K；HDMI 音频未验证。
+- 移植时修复的 7.3.1 适配问题：
+  - `hhi` syscon 节点补回 `#address-cells`/`#size-cells`/`ranges`，
+    否则 `hdmi-phy@3a0` 没有可翻译的 MMIO 资源，PHY probe 返回 `-EINVAL`；
+  - TranSwitch bridge 改用 `devm_drm_bridge_alloc()`，并补上
+    `atomic_create_state`，否则 7.3.1 的 `drm_bridge_add()`/`attach` 会段错误；
+  - `meson_venc_init()` 的 VDAC/HHI 写入加 `priv->hhi` 保护，S805 没有
+    HHI 资源时不再 NULL 解引用；
+  - VCLK 频率统一使用 Hz，HDMI PHY 频率上限也用 Hz 表示。
+
 ## GPU（Mali-450 / lima）
 
 - 内核启用 `CONFIG_DRM_LIMA=m`，设备树使用 `meson8b.dtsi` 的
@@ -74,7 +102,7 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
   写入根文件系统；缺少这两个文件时 `modprobe` 和 udev 无法加载任何模块。
 - 根文件系统包含 Bookworm 的 Mesa（`lima_dri.so`、libEGL、libGLES、libgbm）。
   EGL surfaceless + GLES2 实测：`GL_VENDOR: lima`、`GL_RENDERER: Mali450`。
-- 仅 3D 加速；S805 的 HDMI 显示输出未启用，VPU 硬件视频解码也没有
+- S805 的 HDMI 显示输出已启用（见上一节）；VPU 硬件视频解码没有
   mainline 驱动（视频解码仍走 CPU）。`VCC_CORE` 由 CPU 与 GPU 共用，
   DTS 不绑定 `mali-supply`，启动日志中的
   `_opp_set_regulators: no regulator (mali) found` 是预期提示，不影响 lima。

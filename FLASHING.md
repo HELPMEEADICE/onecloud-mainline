@@ -209,8 +209,10 @@ fatload ${bootdev} 0x20800000 boot.scr && autoscr 0x20800000
 
 - 已在真实玩客云上验证 7.3.1 启动、eMMC、千兆以太网和 Mali-450 GPU 3D；
   USB host、SD 卡热插拔、CPU 调压/调频长期稳定性仍需自行验证。首次实机启动建议接串口。
-- HDMI 显示输出未启用；以串口和 SSH 为准。Mali-450 的 3D 加速（lima）可用，
-  但 S805 的 VPU 视频硬解没有 mainline 驱动，视频解码走 CPU。
+- HDMI 显示输出已启用：开机后由 `meson-drm`/`meson_transwitch_hdmi`/
+  HDMI PHY 模块驱动，实机输出 1920x1080 framebuffer console，颜色正常；
+  串口和 SSH 仍可用。S805 的 HDMI PHY 上限约 1.65 GHz，不支持 4K；
+  HDMI 音频未验证。S805 的 VPU 视频硬解没有 mainline 驱动，视频解码走 CPU。
 - IR、WiFi 未配置。
 - 如果实机只有 CPU0 在线，或 eFuse/MAC 读取异常，参考 `BUILD_REPORT.md` 第 10 节，评估 TrustZone 补丁。
 - 主线的 U-Boot 重建产物已单独放在 `output/uboot/`；主镜像仍使用 Armbian 26.08.0 基线的已知可工作 U-Boot。实验性 `-uboot-gcc15` 镜像保留基线 SPL/DDR 和 `UBOOT_COMP.USB`，只替换 U-Boot proper payload，仍需要串口和救砖手段。

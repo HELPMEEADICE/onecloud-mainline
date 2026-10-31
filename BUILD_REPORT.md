@@ -148,9 +148,37 @@ DDR 初始化代码对编译器和时序非常敏感，上游 CI 本身使用的
 4. **厂商前缀**
    - 在 `Documentation/devicetree/bindings/vendor-prefixes.yaml` 增加 `"^xunlei,.*"`，避免 `make dtbs_check` 的厂商前缀警告。保存为 `patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`。
 
+**HDMI/DRM 显示（已移植并在实机验证）**
+
+Armbian 6.12 的 HDMI 补丁系列（`0045`–`0067`）已移植为
+`patches/0003-drm-meson-add-Meson8b-VPU-HDMI-support.patch`，包括 Meson8b VPU、
+TranSwitch HDMI TX、HDMI PHY、VCLK 和 DTS 节点。实机验证 1920x1080
+framebuffer console 正常显示，HDMI HPD/EDID 正常。
+
+移植到 7.3.1 时修复的关键问题：
+
+- `meson.dtsi` 的 `hhi` syscon 节点补回 `#address-cells`/`#size-cells`/`ranges`。
+  7.3.1 删除了这三个属性，导致 `hdmi-phy@3a0` 的子设备没有可翻译的 MMIO
+  资源，PHY probe 返回 `-EINVAL`。
+- TranSwitch bridge 改用 `devm_drm_bridge_alloc()`，并补上
+  `atomic_create_state` 回调。7.3.1 的 `drm_bridge_add()` 要求 bridge 由该
+  helper 分配；旧式内嵌零初始化 `struct drm_bridge` 会在 `drm_bridge_add()`
+  和 `drm_bridge_attach()` 中段错误。
+- `meson_venc_init()` 的 VDAC/HHI 写入增加 `priv->hhi` 保护。S805 的 VPU
+  节点没有 HHI 内存资源，`priv->hhi == NULL`，原先会 NULL 解引用。
+- VCLK 频率统一按 Hz 传递（7.3.1 的 `clk_set_rate_exclusive()` 使用 Hz），
+  HDMI PHY 频率上限也改为 Hz。
+- bridge 的 `atomic_enable`/`atomic_disable`、`attach`/`detect`、
+  `get_dai_id` 和 color format 标志按 7.3.1 API 调整。
+- 不使用 Armbian 的 CVBS DAC PHY：7.3.1 没有该驱动，HDMI 不依赖它。
+
+HDMI 驱动以模块形式构建，由 `/etc/modules-load.d/onecloud.conf` 在开机时
+加载，`hdmi-load.service` 作为 deferred-probe 兜底；加载顺序为
+`display-connector` → `phy-meson8-hdmi-tx` → `meson-transwitch-hdmi` →
+`meson-drm`。
+
 未移植的内容及原因：
 
-- **HDMI/DRM 显示**：Armbian 6.12 的 HDMI 补丁系列（`0045`–`0067`）包含 WiP/VCLK HACK，且 7.x 显示子系统 API 变动较大；本任务目标是无桌面 Debian Minimal，HDMI 不是启动必需项。因此本内核未启用 HDMI 输出节点和显示控制器；但 Mali-450 的 3D 加速已通过通用的 lima DRM 驱动启用（见第 5 节）。串口是主要控制台。
 - **USB OTG role-switch**：依赖 Armbian 的 DWC2 connector 补丁，7.3.1 未合并；改为 host 模式，牺牲 OTG peripheral 功能。
 - **IR 遥控器**：DTS 保留了 `&ir_receiver`，但本次配置中 `CONFIG_IR_MESON` 未被 Kconfig 接受（最终 `.config` 中没有该符号），因此没有 `meson-ir` 模块；不影响启动。
 - **WiFi SDIO**：OneCloud 的 SDIO WiFi 需要额外芯片/固件支持，本次未配置；SD 卡槽本身可用。
@@ -337,12 +365,13 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
 ## 10. 尚未解决/需要实机确认的问题
 
 1. **实机验证范围仍有限。** 已在真实玩客云（私网地址已隐去）验证 7.3.1
-   启动、eMMC 根文件系统、千兆以太网和 Mali-450 GPU 3D。尚未逐项确认：
+   启动、eMMC 根文件系统、千兆以太网、Mali-450 GPU 3D 和 HDMI 1920x1080
+   显示（含 HPD/EDID）。尚未逐项确认：
    - USB host 枚举与热插拔；
    - RTL8211F RGMII 时序和高负载下的长期稳定性；
    - CPU 核心电压 PWM regulator 与 cpufreq/GPU devfreq 的长期稳定性；
    - SD 卡热插拔；
-   - HDMI 显示输出（当前未启用）。
+   - HDMI 音频和 4K 输出（S805 HDMI PHY 上限约 1.65 GHz）。
 
    已修复的两个启动阻断点（legacy `/memory` 节点、`uImage` 加载地址
    `0x208000`）均已在实机启动中验证通过。
@@ -353,7 +382,12 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
    - 温度校准缺失；
    则需要移植 Armbian 的 `0029`–`0034` 补丁，并把 CPU `enable-method` 改为 `amlogic,meson8-trustzone-firmware-smp`（需同时加入 firmware 节点）。这是下一步最值得优先验证的兼容性点。
 
-3. **HDMI 显示输出未启用。** 本镜像定位为无桌面服务器；没有 KMS/HDMI 显示节点，显示输出不可用。Mali-450 的 3D 加速（lima）已启用并通过实机渲染测试。若需要 HDMI，需要移植 6.12 的 DRM 显示补丁系列并解决 7.x API 变化，工作量和风险都较大。
+3. **HDMI 显示已启用。** `meson-drm`、`meson_transwitch_hdmi`、HDMI PHY
+   和 `display-connector` 以模块形式加载，实机输出 1920x1080 framebuffer
+   console，颜色正常。模块由 `/etc/modules-load.d/onecloud.conf` 和
+   `hdmi-load.service` 自动加载。S805 的 HDMI PHY 上限约 1.65 GHz，因此
+   不支持 4K；HDMI 音频未验证。若需要无模块的早期显示，可把上述符号改为
+   `=y` 内建，但当前模块方案已在实机验证。
 
 4. **IR 驱动未编译。** `CONFIG_IR_MESON` 在当前配置组合下未被 Kconfig 接受；DTS 节点保留但无驱动。若需要红外，需要单独调整 `RC_CORE`/media 依赖并重新构建。
 
@@ -418,4 +452,5 @@ GCC15 重编时序敏感的 SPL 导致完全无法启动。
 最终结论：
 
 > **静态校验通过；QEMU 通用平台用户空间验证通过；真实 OneCloud（Amlogic S805）
-> 实机验证了启动、eMMC、千兆以太网和 Mali-450 GPU 3D。HDMI 显示输出仍未启用。**
+> 实机验证了启动、eMMC、千兆以太网、Mali-450 GPU 3D 和 HDMI 1920x1080
+> 显示输出。**

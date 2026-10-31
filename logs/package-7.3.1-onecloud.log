@@ -1054,3 +1054,306 @@ drwxr-xr-x 1 hedc hedc  260 10月31日 20:19 uboot
 -rw-r--r-- 1 hedc hedc 3.6K 10月31日 20:24 verify.log
 -rwxr-xr-x 1 hedc hedc  12K 10月31日 20:24 verify.sh
 === packaging complete 2026-10-31T13:44:50Z ===
+=== OneCloud packaging 2026-10-31T15:11:22Z ===
+preparing rootfs
+gfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+Allocated inode: 30573
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+Allocated inode: 30574
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+Allocated inode: 30575
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+Allocated inode: 30577
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+Allocated inode: 30578
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko gid 0
+
+copied 1098 files to /home/hedc/OneCloud/onecloud-mainline/rootfs/onecloud-rootfs.ext4:/lib/modules/7.3.1-onecloud
+debugfs 1.47.4 (6-Mar-2025)
+debugfs 1.47.4 (6-Mar-2025)
+preparing boot partition
+building normal disk image
+building Amlogic burn image
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+building GCC15 U-Boot payload variant
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+publishing output
+总计 5.0G
+-rw-r--r-- 1 hedc hedc  28K 10月31日 22:17 BUILD_REPORT.md
+-rwxr-xr-x 1 hedc hedc 6.0K 10月31日 21:58 build.sh
+drwxr-xr-x 1 hedc hedc   46 10月31日 17:49 config
+-rw-r--r-- 1 hedc hedc 8.7K 10月31日 22:17 FLASHING.md
+drwxr-xr-x 1 hedc hedc  170 10月31日 17:20 kernel
+drwxr-xr-x 1 hedc hedc 1.2K 10月31日 21:58 logs
+drwxr-xr-x 1 hedc hedc   58 10月31日 17:20 modules
+-rw-r--r-- 1 hedc hedc 1.2G 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.burn.img
+-rw-r--r-- 1 hedc hedc  102 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.burn.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf.burn.img.xz
+-rw-r--r-- 1 hedc hedc  105 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.burn.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.6G 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.img
+-rw-r--r-- 1 hedc hedc   97 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf.img.xz
+-rw-r--r-- 1 hedc hedc  100 10月31日 23:11 OneCloud-Linux-7.3.1-armhf.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.2G 10月31日 23:11 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img
+-rw-r--r-- 1 hedc hedc  114 10月31日 23:11 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz
+-rw-r--r-- 1 hedc hedc  117 10月31日 23:12 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz.sha256
+-rwxr-xr-x 1 hedc hedc  12K 10月31日 21:58 package.sh
+drwxr-xr-x 1 hedc hedc  288 10月31日 23:11 patches
+drwxr-xr-x 1 hedc hedc   72 10月31日 19:04 patches-uboot
+-rw-r--r-- 1 hedc hedc  38K 10月31日 21:53 qemu-gpu-rootfs.log
+-rw-r--r-- 1 hedc hedc  39K 10月31日 19:04 qemu-virt-boot.log
+-rw-r--r-- 1 hedc hedc 5.6K 10月31日 22:17 README.md
+drwxr-xr-x 1 hedc hedc  262 10月31日 21:46 scripts
+-rw-r--r-- 1 hedc hedc  635 10月31日 23:12 SHA256SUMS
+-rw-r--r-- 1 hedc hedc 7.6K 10月31日 22:17 SHA256SUMS.all
+drwxr-xr-x 1 hedc hedc  260 10月31日 20:19 uboot
+-rw-r--r-- 1 hedc hedc 3.8K 10月31日 21:58 verify.log
+-rwxr-xr-x 1 hedc hedc  13K 10月31日 21:58 verify.sh
+=== packaging complete 2026-10-31T15:12:12Z ===
+=== OneCloud packaging 2026-10-31T15:12:59Z ===
+preparing rootfs
+gfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+Allocated inode: 30573
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+Allocated inode: 30574
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+Allocated inode: 30575
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+Allocated inode: 30577
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+Allocated inode: 30578
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko gid 0
+
+copied 1098 files to /home/hedc/OneCloud/onecloud-mainline/rootfs/onecloud-rootfs.ext4:/lib/modules/7.3.1-onecloud
+debugfs 1.47.4 (6-Mar-2025)
+debugfs 1.47.4 (6-Mar-2025)
+preparing boot partition
+building normal disk image
+building Amlogic burn image
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+building GCC15 U-Boot payload variant
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+publishing output
+总计 5.0G
+-rw-r--r-- 1 hedc hedc  28K 10月31日 22:17 BUILD_REPORT.md
+-rwxr-xr-x 1 hedc hedc 6.0K 10月31日 21:58 build.sh
+drwxr-xr-x 1 hedc hedc   46 10月31日 17:49 config
+-rw-r--r-- 1 hedc hedc 8.7K 10月31日 22:17 FLASHING.md
+drwxr-xr-x 1 hedc hedc  170 10月31日 17:20 kernel
+drwxr-xr-x 1 hedc hedc 1.2K 10月31日 21:58 logs
+drwxr-xr-x 1 hedc hedc   58 10月31日 17:20 modules
+-rw-r--r-- 1 hedc hedc 1.2G 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.burn.img
+-rw-r--r-- 1 hedc hedc  102 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.burn.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf.burn.img.xz
+-rw-r--r-- 1 hedc hedc  105 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.burn.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.6G 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.img
+-rw-r--r-- 1 hedc hedc   97 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf.img.xz
+-rw-r--r-- 1 hedc hedc  100 10月31日 23:13 OneCloud-Linux-7.3.1-armhf.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.2G 10月31日 23:13 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img
+-rw-r--r-- 1 hedc hedc  114 10月31日 23:13 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 10月31日 21:43 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz
+-rw-r--r-- 1 hedc hedc  117 10月31日 23:13 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz.sha256
+-rwxr-xr-x 1 hedc hedc  12K 10月31日 21:58 package.sh
+drwxr-xr-x 1 hedc hedc  288 10月31日 23:11 patches
+drwxr-xr-x 1 hedc hedc   72 10月31日 19:04 patches-uboot
+-rw-r--r-- 1 hedc hedc  38K 10月31日 21:53 qemu-gpu-rootfs.log
+-rw-r--r-- 1 hedc hedc  39K 10月31日 19:04 qemu-virt-boot.log
+-rw-r--r-- 1 hedc hedc 5.6K 10月31日 22:17 README.md
+drwxr-xr-x 1 hedc hedc  262 10月31日 21:46 scripts
+-rw-r--r-- 1 hedc hedc  635 10月31日 23:13 SHA256SUMS
+-rw-r--r-- 1 hedc hedc 7.6K 10月31日 22:17 SHA256SUMS.all
+drwxr-xr-x 1 hedc hedc  260 10月31日 20:19 uboot
+-rw-r--r-- 1 hedc hedc 3.8K 10月31日 21:58 verify.log
+-rwxr-xr-x 1 hedc hedc  13K 10月31日 21:58 verify.sh
+=== packaging complete 2026-10-31T15:13:53Z ===
+=== OneCloud packaging 2026-10-31T16:13:34Z ===
+preparing rootfs
+gfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+Allocated inode: 30573
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+Allocated inode: 30574
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+Allocated inode: 30575
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+Allocated inode: 30577
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko gid 0
+debugfs: rm /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+
+debugfs: write /home/hedc/OneCloud/onecloud-mainline/rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+Allocated inode: 30578
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko gid 0
+
+copied 1098 files to /home/hedc/OneCloud/onecloud-mainline/rootfs/onecloud-rootfs.ext4:/lib/modules/7.3.1-onecloud
+debugfs 1.47.4 (6-Mar-2025)
+debugfs 1.47.4 (6-Mar-2025)
+debugfs 1.47.4 (6-Mar-2025)
+debugfs 1.47.4 (6-Mar-2025)
+preparing boot partition
+building normal disk image
+building Amlogic burn image
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+publishing output
+compressing images (xz -T0 -6)
+总计 4.6G
+-rw-r--r-- 1 hedc hedc  28K 10月31日 22:17 BUILD_REPORT.md
+-rwxr-xr-x 1 hedc hedc 6.0K 10月31日 21:58 build.sh
+drwxr-xr-x 1 hedc hedc   46 10月31日 17:49 config
+-rw-r--r-- 1 hedc hedc 8.7K 10月31日 22:17 FLASHING.md
+drwxr-xr-x 1 hedc hedc  170 10月31日 17:20 kernel
+drwxr-xr-x 1 hedc hedc 1.2K 10月31日 21:58 logs
+drwxr-xr-x 1 hedc hedc   58 10月31日 17:20 modules
+-rw-r--r-- 1 hedc hedc 1.2G 11月 1日 00:13 OneCloud-Linux-7.3.1-armhf.burn.img
+-rw-r--r-- 1 hedc hedc  102 11月 1日 00:14 OneCloud-Linux-7.3.1-armhf.burn.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 11月 1日 00:13 OneCloud-Linux-7.3.1-armhf.burn.img.xz
+-rw-r--r-- 1 hedc hedc  105 11月 1日 00:14 OneCloud-Linux-7.3.1-armhf.burn.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.6G 11月 1日 00:13 OneCloud-Linux-7.3.1-armhf.img
+-rw-r--r-- 1 hedc hedc   97 11月 1日 00:14 OneCloud-Linux-7.3.1-armhf.img.sha256
+-rw-r--r-- 1 hedc hedc 367M 11月 1日 00:13 OneCloud-Linux-7.3.1-armhf.img.xz
+-rw-r--r-- 1 hedc hedc  100 11月 1日 00:14 OneCloud-Linux-7.3.1-armhf.img.xz.sha256
+-rw-r--r-- 1 hedc hedc 1.2G 10月31日 23:13 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img
+-rw-r--r-- 1 hedc hedc  114 11月 1日 00:14 OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.sha256
+-rwxr-xr-x 1 hedc hedc  12K 10月31日 21:58 package.sh
+drwxr-xr-x 1 hedc hedc  288 10月31日 23:11 patches
+drwxr-xr-x 1 hedc hedc   72 10月31日 19:04 patches-uboot
+-rw-r--r-- 1 hedc hedc  38K 10月31日 21:53 qemu-gpu-rootfs.log
+-rw-r--r-- 1 hedc hedc  39K 10月31日 19:04 qemu-virt-boot.log
+-rw-r--r-- 1 hedc hedc 5.6K 10月31日 22:17 README.md
+drwxr-xr-x 1 hedc hedc  262 10月31日 21:46 scripts
+-rw-r--r-- 1 hedc hedc  404 11月 1日 00:15 SHA256SUMS
+-rw-r--r-- 1 hedc hedc 7.6K 10月31日 22:17 SHA256SUMS.all
+drwxr-xr-x 1 hedc hedc  260 10月31日 20:19 uboot
+-rw-r--r-- 1 hedc hedc 3.8K 10月31日 21:58 verify.log
+-rwxr-xr-x 1 hedc hedc  13K 10月31日 21:58 verify.sh
+=== packaging complete 2026-10-31T16:15:04Z ===

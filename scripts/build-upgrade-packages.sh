@@ -30,7 +30,9 @@ mkdir -p "$DATA/usr/lib/modules" "$PAYLOAD"
 cp -a "$MODSRC" "$DATA/usr/lib/modules/"
 # Strip build-host symlinks added by modules_install; they are not usable on target.
 for link in build source; do
-    [ -L "$DATA/usr/lib/modules/$KREL/$link" ] && rm "$DATA/usr/lib/modules/$KREL/$link"
+    if [ -L "$DATA/usr/lib/modules/$KREL/$link" ]; then
+        rm "$DATA/usr/lib/modules/$KREL/$link"
+    fi
 done
 install -m 0644 "$ROOT/build/uImage" "$PAYLOAD/uImage"
 install -m 0644 "$ROOT/build/uInitrd" "$PAYLOAD/uInitrd"

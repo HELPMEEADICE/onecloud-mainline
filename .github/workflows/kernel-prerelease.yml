@@ -1,0 +1,282 @@
+name: Linux kernel auto prerelease
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional final kernel version (7.3.1 or newer)'
+        required: false
+        type: string
+      include_uncompressed:
+        description: 'Also upload raw IMG and burn IMG (about 2.8 GB)'
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - '.github/workflows/kernel-prerelease.yml'
+      - 'scripts/**'
+      - 'build.sh'
+      - 'package.sh'
+      - 'verify.sh'
+      - 'patches/**'
+      - 'config/**'
+permissions:
+  contents: read
+concurrency:
+  group: onecloud-prerelease-v2-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          bash -n build.sh package.sh verify.sh scripts/*.sh
+          python3 -m unittest discover -s scripts/tests -v
+  rootfs-apt-smoke:
+    if: github.event_name == 'pull_request'
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ARMHF emulation and rootfs tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-user-static e2fsprogs util-linux curl xz-utils ca-certificates
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - name: Test signed ARMHF apt-get update
+        run: bash scripts/smoke-rootfs-apt.sh
+      - name: Record disk space on failure
+        if: failure()
+        run: df -h . /tmp
+
+  integration-build:
+    # A real full build on the PR branch, without publishing untested firmware.
+    if: github.event_name == 'pull_request'
+    needs: [lint, rootfs-apt-smoke]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      ROOTFS_EXECUTOR: chroot
+      KVER: '7.3.1'
+      JOBS: '4'
+      BUILD_UBOOT: '0'
+      UBOOT_VARIANT: '0'
+      XZ_LEVEL: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/powershell /usr/local/.ghcup
+          df -h .
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev perl patch cpio e2fsprogs kmod xz-utils curl file git gnupg dirmngr ca-certificates mtools u-boot-tools android-sdk-libsparse-utils qemu-user-static proot fakeroot util-linux device-tree-compiler
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - name: Build signed kernel, modules, DTB
+        run: PACKAGE=0 ./build.sh
+      - name: Build rootfs and both flash images
+        run: ./package.sh
+      - name: Verify images and checksums
+        run: |
+          set -euo pipefail
+          ./verify.sh | tee "logs/verify-ci-${KVER}.log"
+          (cd output && sha256sum -c SHA256SUMS)
+          test -s "output/OneCloud-Linux-${KVER}-armhf.img.xz"
+          test -s "output/OneCloud-Linux-${KVER}-armhf.burn.img.xz"
+          test -s "output/modules/modules-${KVER}-onecloud.tar.xz"
+          test -s output/kernel/uImage
+          test -s output/kernel/meson8b-onecloud.dtb
+      - name: Upload compressed firmware to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz.sha256
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz.sha256
+            output/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload kernel modules and device tree to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-kernel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/kernel/
+            output/modules/
+            output/patches/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-pr-integration-${{ github.run_id }}
+          path: |
+            logs/*.log
+            logs/source-*.sha256
+          if-no-files-found: ignore
+          retention-days: 14
+
+  detect:
+    if: github.event_name != 'pull_request'
+    needs: lint
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      tag: ${{ steps.pick.outputs.tag }}
+      fresh: ${{ steps.dedupe.outputs.fresh }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: python3 scripts/detect-release.py
+      - id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.pick.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'fresh=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'fresh=true' >> "$GITHUB_OUTPUT"
+          fi
+  publish:
+    needs: [lint, detect]
+    # Explicit manual builds always run, even when a release tag already exists.
+    if: github.event_name == 'workflow_dispatch' || needs.detect.outputs.fresh == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    env:
+      ROOTFS_EXECUTOR: chroot
+      KVER: ${{ needs.detect.outputs.version }}
+      TAG: ${{ needs.detect.outputs.tag }}
+      JOBS: '4'
+      BUILD_UBOOT: '0'
+      UBOOT_VARIANT: '0'
+      XZ_LEVEL: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/powershell /usr/local/.ghcup
+          df -h .
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev perl patch cpio e2fsprogs kmod xz-utils curl file git gnupg dirmngr ca-certificates mtools u-boot-tools android-sdk-libsparse-utils qemu-user-static proot fakeroot util-linux device-tree-compiler
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - name: Build kernel
+        run: PACKAGE=0 ./build.sh
+      - name: Package flash images
+        run: ./package.sh
+      - name: Validate complete images
+        run: |
+          set -euo pipefail
+          ./verify.sh | tee "logs/verify-ci-${KVER}.log"
+          (cd output && sha256sum -c SHA256SUMS)
+          test -s "output/OneCloud-Linux-${KVER}-armhf.img.xz"
+          test -s "output/OneCloud-Linux-${KVER}-armhf.burn.img.xz"
+          test -s "output/modules/modules-${KVER}-onecloud.tar.xz"
+          test -s output/kernel/uImage
+          test -s output/kernel/meson8b-onecloud.dtb
+      - name: Upload compressed firmware to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz.sha256
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz.sha256
+            output/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload kernel modules and device tree to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-kernel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/kernel/
+            output/modules/
+            output/patches/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload raw disk IMG (manual opt-in)
+        if: github.event_name == 'workflow_dispatch' && inputs.include_uncompressed == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-disk-raw-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload raw USB burning IMG (manual opt-in)
+        if: github.event_name == 'workflow_dispatch' && inputs.include_uncompressed == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-burn-raw-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Create prerelease
+        if: needs.detect.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/release.md" <<EOF
+          Automated OneCloud Linux ${KVER} build.
+
+          - Signed kernel.org source; SHA256 and approved maintainer PGP signature checked.
+          - Amlogic S805 / Meson8b; Armbian 26.08.0 Bookworm base and original bootloader.
+          - Static image checks passed, including Amlogic burn image re-unpack and checksums.
+          - **NO real hardware boot, GPU, HDMI or USB regression test. Experimental; backup first.**
+          EOF
+          shopt -s nullglob
+          files=(output/OneCloud-Linux-"$KVER"-armhf.img output/OneCloud-Linux-"$KVER"-armhf.burn.img output/OneCloud-Linux-"$KVER"-armhf.img.xz output/OneCloud-Linux-"$KVER"-armhf.burn.img.xz output/SHA256SUMS output/modules/modules-"$KVER"-onecloud.tar.xz output/kernel/uImage output/kernel/uInitrd output/kernel/meson8b-onecloud.dtb)
+          for f in "${files[@]}"; do test -s "$f"; done
+          gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "OneCloud Linux $KVER (automated, untested)" --prerelease --notes-file "$RUNNER_TEMP/release.md"
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-diagnostics-${{ github.run_id }}
+          path: logs/
+          if-no-files-found: ignore
+          retention-days: 14

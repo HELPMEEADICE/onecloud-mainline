@@ -13,6 +13,7 @@ IMG="$OUT/OneCloud-Linux-$KVER-armhf.img"
 BURN="$OUT/OneCloud-Linux-$KVER-armhf.burn.img"
 KERNEL="$OUT/kernel"
 KERNELRELEASE_FILE="$KERNEL_BUILD/include/config/kernel.release"
+mkdir -p "$ROOT/tmp"
 TMP=$(mktemp -d "$ROOT/tmp/verify.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 PASS=0
@@ -130,6 +131,8 @@ check "rootfs eth0 DHCP" "debugfs -R 'cat /etc/systemd/network/10-ethernet.netwo
 debugfs -R "dump /lib/systemd/systemd $TMP/systemd" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1
 check "rootfs systemd is ARM EABI5" "file '$TMP/systemd' | grep -q 'ELF 32-bit LSB.*ARM.*EABI5'"
 check "rootfs fstab UUID" "debugfs -R 'cat /etc/fstab' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'UUID=8a03b678-0b46-4f41-bb09-3a2d154439bc / ext4'"
+
+check "Mesa lima_dri.so installed" "debugfs -R 'stat /usr/lib/arm-linux-gnueabihf/dri/lima_dri.so' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'Inode:'"
 
 section "boot partition"
 BOOT="$ROOT/rootfs/onecloud-boot.vfat"

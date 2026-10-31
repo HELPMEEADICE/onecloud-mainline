@@ -464,7 +464,7 @@ Changes relative to the original series:
  &gpio {
  	gpio-line-names =
  		/*  0 */ "WIFI_SDIO_D0 PIN18 (GPIOX_0)",
-@@ -416,5 +462,17 @@
+@@ -416,9 +462,21 @@
  &usb1_phy {
  	status = "okay";
  };
@@ -482,6 +482,10 @@ Changes relative to the original series:
 +};
 +
  &ir_receiver {
+ 	status = "okay";
+ 	pinctrl-0 = <&ir_recv_pins>;
+ 	pinctrl-names = "default";
+ };
 --- a/drivers/gpu/drm/meson/Kconfig
 +++ b/drivers/gpu/drm/meson/Kconfig
 @@ -27,3 +27,13 @@

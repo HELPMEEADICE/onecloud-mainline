@@ -1,0 +1,153 @@
+name: Automatic Linux kernel pre-releases
+
+on:
+  schedule:
+    - cron: "37 3,15 * * *"
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: "Optional final Linux version (blank = kernel.org latest stable)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: onecloud-upstream-prerelease
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      needed: ${{ steps.needed.outputs.needed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test kernel release discovery
+        run: python3 -m unittest discover -s tests -v
+      - name: Select final stable Linux release
+        id: version
+        env:
+          OVERRIDE: ${{ inputs.kernel_version }}
+        run: |
+          args=()
+          if [[ -n "$OVERRIDE" ]]; then args+=(--version "$OVERRIDE"); fi
+          python3 scripts/kernel-release.py "${args[@]}"
+      - name: Avoid rebuilding existing release
+        id: needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG exists; skipping." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-release:
+    needs: discover
+    if: needs.discover.outputs.needed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      KVER: ${{ needs.discover.outputs.version }}
+      TAG: ${{ needs.discover.outputs.tag }}
+      JOBS: "4"
+      PACKAGE: "1"
+      BUILD_UBOOT: "0"
+      UBOOT_VARIANT: "0"
+      ROOTFS_EXECUTOR: proot
+      XZ_LEVEL: "3"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare disk space
+        run: |
+          df -h .
+          sudo rm -rf /usr/local/lib/android /opt/hostedtoolcache /usr/share/dotnet \
+            /usr/local/share/powershell /usr/local/.ghcup || true
+          df -h .
+      - name: Install cross-build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            bc binutils bison build-essential cpio curl device-tree-compiler dosfstools \
+            e2fsprogs fakeroot file flex git gnupg golang-go kmod libssl-dev \
+            mtools openssl patch perl proot python3 qemu-user-static rsync \
+            u-boot-tools util-linux xz-utils zstd
+      - name: Validate upstream Linux source and signing key
+        run: |
+          bash scripts/fetch-kernel.sh "$KVER"
+          test -s "logs/source-$KVER.sha256"
+      - name: Compile kernel, apply downstream patches, package complete images
+        run: bash build.sh
+      - name: Strict full-image verification gate
+        run: |
+          bash verify.sh | tee "logs/verify-$KVER.log"
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Release manifest and all asset checksums
+        run: |
+          {
+            echo "kernel=$KVER"
+            echo "release=$TAG"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "commit=$GITHUB_SHA"
+            echo "build_date=$(date -u +%FT%TZ)"
+            echo "toolchain=Arm GNU Toolchain 15.2.Rel1"
+            cat "logs/source-$KVER.sha256"
+          } > "output/BUILD-MANIFEST.txt"
+          (
+            cd output
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
+      - name: Archive diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic-linux-${{ needs.discover.outputs.version }}
+          path: |
+            logs/
+            output/BUILD-MANIFEST.txt
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Create pre-release (never a stable release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(
+            "output/OneCloud-Linux-$KVER-armhf.img.xz"
+            "output/OneCloud-Linux-$KVER-armhf.burn.img.xz"
+            "output/modules/modules-$KVER-onecloud.tar.xz"
+            "output/kernel/meson8b-onecloud.dtb"
+            "output/kernel/config-$KVER-onecloud"
+            "output/SHA256SUMS"
+            "output/BUILD-MANIFEST.txt"
+            "logs/source-$KVER.sha256"
+            "logs/verify-$KVER.log"
+          )
+          for file in "${files[@]}"; do test -s "$file"; done
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          Automated OneCloud Linux **$KVER** pre-release.
+
+          This build includes the normal disk image and the Amlogic USB Burning Tool
+          image, Linux kernel modules and the downstream OneCloud patch stack.
+
+          **Warning:** static verification passed, but CI did not test booting
+          or flashing on physical OneCloud hardware. Do not assume that a new
+          kernel minor version is hardware-qualified. Keep a recovery path.
+
+          Source revision: \`$GITHUB_SHA\`
+          EOF
+          gh release create "$TAG" "${files[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "OneCloud Linux $KVER (automated pre-release)" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --prerelease

@@ -21,7 +21,9 @@ then runs the **existing full static verification suite** via `verify.sh`.
 Only an entirely successful build and verification can reach `gh release create
 --prerelease`.
 
-Release assets include both compressed flash images, a modules archive,
+Release assets include both compressed flash images, a Debian armhf `.deb` kernel
+upgrade package, an Arch Linux ARM armv7h `.pkg.tar.zst` kernel upgrade package,
+a modules archive,
 OneCloud DTB, final kernel configuration, SHA256SUMS, a build manifest, the
 upstream tarball SHA256 record, and the complete verification log. The
 uncompressed image files remain local to the ephemeral CI runner to avoid
@@ -29,6 +31,11 @@ oversized Release assets. The published SHA256SUMS covers both the published
 and locally built deliverables; after download, run
 `sha256sum -c SHA256SUMS` only if all listed paths are present, or verify
 individual downloaded assets with `sha256sum`.
+
+Package creation is checked with a synthetic smoke test, then the real binary
+archives are unpacked and compared with the built objects and each other.
+Installation and boot on real hardware remain untested; see
+[Kernel upgrade packages](KERNEL_PACKAGES.md) for conditions and commands.
 
 Source verification is performed by the repository's existing
 `scripts/fetch-kernel.sh`. It verifies a checksum from kernel.org's sums

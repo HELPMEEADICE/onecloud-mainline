@@ -1,0 +1,34 @@
+name: Kernel package archive smoke tests
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/package-smoke.yml"
+      - ".github/workflows/auto-release.yml"
+      - "scripts/activate-kernel.sh"
+      - "scripts/build-upgrade-packages.sh"
+      - "scripts/verify-upgrade-packages.sh"
+      - "tests/smoke-upgrade-packages.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive-formats:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install package archive tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libarchive-tools dpkg-dev zstd
+      - name: Lint packaging and activation shell
+        run: |
+          bash -n scripts/activate-kernel.sh
+          bash -n scripts/build-upgrade-packages.sh
+          bash -n scripts/verify-upgrade-packages.sh
+          bash -n tests/smoke-upgrade-packages.sh
+      - name: Assemble and inspect synthetic Debian and pacman packages
+        run: bash tests/smoke-upgrade-packages.sh

@@ -23,6 +23,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 |---|---|
 | [BUILD_REPORT.md](BUILD_REPORT.md) | 完整移植与构建报告：版本来源、设备树修改、根文件系统、校验结果、限制 |
 | [FLASHING.md](FLASHING.md) | 刷机指南：线刷包与普通磁盘镜像的写入方法、串口与首次启动 |
+| [docs/KERNEL_PACKAGES.md](docs/KERNEL_PACKAGES.md) | Debian/Armbian APT 和 Arch Linux ARM pacman 内核升级包 |
 
 ## 目录结构
 

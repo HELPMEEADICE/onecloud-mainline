@@ -81,6 +81,8 @@ jobs:
             dpkg-dev e2fsprogs fakeroot file flex git gnupg golang-go kmod libarchive-tools libssl-dev \
             mtools openssl patch perl proot python3 qemu-user-static rsync \
             u-boot-tools util-linux xz-utils zstd
+      - name: Smoke-test Debian and pacman binary packaging
+        run: bash tests/smoke-upgrade-packages.sh
       - name: Validate upstream Linux source and signing key
         run: |
           bash scripts/fetch-kernel.sh "$KVER"

@@ -20,7 +20,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: onecloud-release-${{ github.ref }}
+  group: onecloud-prerelease-v2-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   lint:

@@ -68,7 +68,11 @@ else
         }
     command -v mountpoint >/dev/null || { echo "mountpoint is required" >&2; exit 1; }
 fi
-[ -x "$ROOT/tools/localroot/usr/bin/mcopy" ] || { echo "run scripts/bootstrap-tools.sh first" >&2; exit 1; }
+if [ "$ROOTFS_APT_SMOKE" != 1 ]; then
+    [ -x "$ROOT/tools/localroot/usr/bin/mcopy" ] || {
+        echo "run scripts/bootstrap-tools.sh first" >&2; exit 1;
+    }
+fi
 command -v fakeroot >/dev/null || { echo "fakeroot is required" >&2; exit 1; }
 [ -f "$SRC_IMG" ] || { echo "missing source rootfs: $SRC_IMG" >&2; exit 1; }
 

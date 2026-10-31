@@ -29,6 +29,51 @@ jobs:
           set -euo pipefail
           bash -n build.sh package.sh verify.sh scripts/*.sh
           python3 -m unittest discover -s scripts/tests -v
+  integration-build:
+    # A real full build on the PR branch, without publishing untested firmware.
+    if: github.event_name == 'pull_request'
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      KVER: '7.3.1'
+      JOBS: '4'
+      BUILD_UBOOT: '0'
+      UBOOT_VARIANT: '0'
+      XZ_LEVEL: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/powershell /usr/local/.ghcup
+          df -h .
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev perl patch cpio e2fsprogs kmod xz-utils curl file git gnupg dirmngr ca-certificates mtools u-boot-tools android-sdk-libsparse-utils qemu-user-static proot fakeroot util-linux device-tree-compiler
+      - name: Build signed kernel, modules, DTB
+        run: PACKAGE=0 ./build.sh
+      - name: Build rootfs and both flash images
+        run: ./package.sh
+      - name: Verify images and checksums
+        run: |
+          set -euo pipefail
+          ./verify.sh | tee "logs/verify-ci-${KVER}.log"
+          (cd output && sha256sum -c SHA256SUMS)
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-pr-integration-${{ github.run_id }}
+          path: |
+            logs/*.log
+            logs/source-*.sha256
+          if-no-files-found: ignore
+          retention-days: 14
+
   detect:
     if: github.event_name != 'pull_request'
     needs: lint

@@ -4,7 +4,11 @@
 Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、根文件系统定制脚本、
 打包/校验脚本，以及完整的构建与刷机文档。
 
-> 当前状态：静态校验通过，尚未在真实 OneCloud 硬件上完成实机验证。
+> 当前状态：已在真实玩客云上验证 7.3.1 启动、eMMC 根文件系统、千兆以太网和
+> Mali-450 GPU（lima 驱动 + Mesa）。HDMI 显示输出仍未启用。
+> 已修复的启动/驱动阻断点：DTS 的 `/memory` 节点名（U-Boot 2011.03
+> 内存 fixup 兼容性）、`uImage` 头部加载地址（与 Armbian 基线一致），以及
+> 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载。
 > 详见 [BUILD_REPORT.md](BUILD_REPORT.md)。
 
 ## 文档
@@ -20,7 +24,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 .
 ├── build.sh              # 内核 / DTB / 模块 / initramfs / uImage 构建
 ├── package.sh            # 生成 .img、.burn.img、.xz 与 SHA256
-├── verify.sh             # 102 项静态校验（不写块设备）
+├── verify.sh             # 112 项静态校验（不写块设备）
 ├── config/
 │   ├── onecloud.fragment         # 叠加在 multi_v7_defconfig 上的内核配置
 │   ├── onecloud-7.3.1.config     # 最终完整内核配置
@@ -34,7 +38,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 ## 构建
 
 依赖：Arch Linux / 常见 Linux 发行版，`gcc`、`make`、`flex`、`bison`、`perl`、
-`openssl`、`patch`、`cpio`、`debugfs`、`xz`、`curl`。交叉编译器与内核源码由脚本
+`openssl`、`patch`、`cpio`、`debugfs`、`depmod`（kmod）、`xz`、`curl`。交叉编译器与内核源码由脚本
 按固定 SHA256 自动下载到 `tools/`。
 
 ```bash
@@ -52,11 +56,37 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
 ## 补丁
 
 - `patches/0001-ARM-dts-meson8b-add-Xunlei-OneCloud.patch`：新增
-  `meson8b-onecloud.dts`，适配 7.x 的 PWM v2、memory 节点与 USB 模式。
+  `meson8b-onecloud.dts`，适配 7.x 的 PWM v2 与 USB 模式，并保留 U-Boot
+  2011.03 内存 fixup 能识别的 legacy `/memory` 节点。
 - `patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`：新增 `xunlei`
   vendor prefix。
 - `patches-uboot/0001-u-boot-gcc15-build-compat.patch`：让 pinned U-Boot
-  在 GCC 15 下可构建。
+  在 GCC 15 下可构建。注意：GCC15 重编的 SPL/DDR 初始化在实机上不可靠，
+  实验镜像只替换 U-Boot proper payload，SPL/DDR 仍使用 Armbian 基线。
+
+## GPU（Mali-450 / lima）
+
+- 内核启用 `CONFIG_DRM_LIMA=m`，设备树使用 `meson8b.dtsi` 的
+  `arm,mali-450` 节点；驱动绑定后生成 `/dev/dri/card0` 和
+  `/dev/dri/renderD128`。
+- 镜像通过 `/etc/modules-load.d/onecloud.conf` 中的 `lima` 在开机时自动加载。
+  `build.sh` 会显式运行并校验 `depmod`，确保 `modules.dep`/`modules.alias`
+  写入根文件系统；缺少这两个文件时 `modprobe` 和 udev 无法加载任何模块。
+- 根文件系统包含 Bookworm 的 Mesa（`lima_dri.so`、libEGL、libGLES、libgbm）。
+  EGL surfaceless + GLES2 实测：`GL_VENDOR: lima`、`GL_RENDERER: Mali450`。
+- 仅 3D 加速；S805 的 HDMI 显示输出未启用，VPU 硬件视频解码也没有
+  mainline 驱动（视频解码仍走 CPU）。`VCC_CORE` 由 CPU 与 GPU 共用，
+  DTS 不绑定 `mali-supply`，启动日志中的
+  `_opp_set_regulators: no regulator (mali) found` 是预期提示，不影响 lima。
+- 最小 Armbian 镜像默认不带 Mesa，只有 `/dev/dri` 不能完成 GL/EGL 渲染；
+  `scripts/update-rootfs.sh` 已把 Mesa 运行库加入镜像。
+- 非 root 用户需要加入 `video` 和 `render` 组才能访问 `/dev/dri`：
+  `usermod -aG video,render <user>`。
+- 实机自检：把 `scripts/gpu-check.py` 拷到设备后运行 `python3 gpu-check.py`。
+  脚本用 EGL surfaceless 创建 GLES2 上下文，清屏并读回像素；成功时输出
+  `GL_RENDERER: Mali450` 和 `RESULT: lima EGL/GLES2 rendering OK`，如果落到
+  llvmpipe/softpipe 会直接报错。如果提示找不到 `libEGL.so.1`，说明镜像里没有
+  安装 Mesa 运行库。
 
 ## 说明
 

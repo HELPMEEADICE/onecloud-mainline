@@ -13,7 +13,7 @@ certutil -hashfile .\OneCloud-Linux-7.3.1-armhf.burn.img SHA256
 应得到：
 
 ```text
-87312501debb771dceaf4ce91f49905576445b3598424fc00882c4f1c096b67f
+7975f17c116d2b7d92bc9c421b4911de28d396b53a7a2bb31ef65e3650554c35
 ```
 
 Linux：
@@ -39,7 +39,7 @@ sha256sum -c OneCloud-Linux-7.3.1-armhf.burn.img.sha256
    `OneCloud-Linux-7.3.1-armhf.burn.img`
 3. 工具应显示 12 个条目（DDR、UBOOT_COMP、ini、platform、bootloader、resource、boot、rootfs 及 VERIFY）。
 4. 保持工具的默认擦除选项。该线刷包的 `aml_sdc_burn.ini` 中 `erase_bootloader = 1`，会重新写入包内保留的 U-Boot；这是预期行为。
-5. 主包保留的是 Armbian 基线中经过使用验证的 U-Boot。另有实验性的 `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img`，仅用于在串口和救砖条件下测试最新工具链重编的 U-Boot；不要把它当作首次刷写或量产镜像。
+5. 主包保留的是 Armbian 基线中经过使用验证的 U-Boot。另有实验性的 `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img`：它保留基线的 SPL/DDR 初始化和 `UBOOT_COMP.USB`，只把 U-Boot proper payload 换成 GCC 15 构建版本；仍建议在串口和救砖条件下测试，不要把它当作首次刷写或量产镜像。
    其 SHA256：`54aeab76519b27dd44d949bd4494ff53559338906907ce4a86e828dea790ab63`。
 5. **不要勾选 “Erase flash”**，除非你明确要清空整块 eMMC 做救砖。普通升级不需要。
 
@@ -99,6 +99,11 @@ onecloud login:
 
 如果只看到 U-Boot、没有 `Starting kernel`，问题在 U-Boot/镜像加载；如果内核启动但停在 initramfs rescue shell，问题在 rootfs UUID/分区；如果 systemd 进入 emergency mode，优先检查 `/boot` FAT 挂载和 rootfs。
 
+本次已修复的三个“只看到 U-Boot / 设备不可用”原因：DTS 的 `/memory` 节点名（避免 U-Boot
+新增第二个内存节点）、`uImage` 头部加载地址（恢复 Armbian 基线的 `0x208000`
+搬运路径），以及 rootfs 缺少 `modules.dep`/`modules.alias`（导致包括 lima GPU
+驱动在内的所有模块无法加载）。如果仍停住，请记录串口完整输出。
+
 ### 2.3 登录与检查
 
 Armbian 首次启动策略可能要求修改默认密码。常见默认是 `root/1234`；若提示修改，请立即设置强密码。
@@ -116,6 +121,17 @@ systemctl status ssh
 # 应为 active (running)
 
 dmesg | grep -Ei 'mmc|sdhci|meson|eth|stmmac|usb|dwc2'
+
+# GPU：应看到 card0/renderD128 和 lima 初始化日志
+ls -l /dev/dri
+dmesg | grep -i lima
+
+# Mesa 用户态：应显示 "EGL driver name: lima"
+eglinfo 2>/dev/null | grep -i "driver name"
+
+# 仓库自带的 GLES2 渲染自检（把 scripts/gpu-check.py 拷到设备上运行）
+python3 gpu-check.py
+# 应输出 GL_RENDERER: Mali450 和 RESULT: lima EGL/GLES2 rendering OK
 ```
 
 SSH：
@@ -191,10 +207,12 @@ fatload ${bootdev} 0x20800000 boot.scr && autoscr 0x20800000
 
 ## 5. 已知限制
 
-- 本工程没有在真实玩客云上验证，首次实机启动请务必接串口。
-- HDMI/DRM 未启用，显示输出不可用；以串口和 SSH 为准。
+- 已在真实玩客云上验证 7.3.1 启动、eMMC、千兆以太网和 Mali-450 GPU 3D；
+  USB host、SD 卡热插拔、CPU 调压/调频长期稳定性仍需自行验证。首次实机启动建议接串口。
+- HDMI 显示输出未启用；以串口和 SSH 为准。Mali-450 的 3D 加速（lima）可用，
+  但 S805 的 VPU 视频硬解没有 mainline 驱动，视频解码走 CPU。
 - IR、WiFi 未配置。
 - 如果实机只有 CPU0 在线，或 eFuse/MAC 读取异常，参考 `BUILD_REPORT.md` 第 10 节，评估 TrustZone 补丁。
-- 主线的 U-Boot 重建产物已单独放在 `output/uboot/`；主镜像仍使用 Armbian 26.08.0 基线的已知可工作 U-Boot。实验性 U-Boot 包需要串口和救砖手段。
+- 主线的 U-Boot 重建产物已单独放在 `output/uboot/`；主镜像仍使用 Armbian 26.08.0 基线的已知可工作 U-Boot。实验性 `-uboot-gcc15` 镜像保留基线 SPL/DDR 和 `UBOOT_COMP.USB`，只替换 U-Boot proper payload，仍需要串口和救砖手段。
 - 线刷包基于 Armbian 26.08.0 的 U-Boot 和分区布局；不要把它与其它板型的 Amlogic 烧录包混用。
 - eMMC 为 8 GB 级别；本包解压后布局约 1.6 GiB，远小于容量，但不要根据 `.xz` 压缩文件大小判断闪存需求。

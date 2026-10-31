@@ -34,7 +34,14 @@
 +		stdout-path = "serial0:115200n8";
 +	};
 +
-+	memory@40000000 {
++	/*
++	 * Keep the legacy node name "/memory" (no unit address).
++	 * The OneCloud U-Boot 2011.03 fixup_memory_node() searches for
++	 * "/memory" and creates a new /memory node if it is missing.  With
++	 * "memory@40000000" U-Boot would add a second, overlapping node and
++	 * Linux would see 2 GiB of RAM on a 1 GiB board.
++	 */
++	memory {
 +		device_type = "memory";
 +		reg = <0x40000000 0x40000000>;
 +	};

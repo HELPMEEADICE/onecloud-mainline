@@ -33,6 +33,11 @@ apt-get update
 apt-mark hold linux-image-current-meson linux-dtb-current-meson armbian-bsp-cli-onecloud-current
 apt-get -y -o Dpkg::Options::=--force-confold \
     -o APT::Keep-Downloaded-Packages=false -o Acquire::Retries=3 full-upgrade
+# Mesa userspace for the Mali-450 GPU (lima DRM driver).  The minimal
+# Armbian image ships no EGL/GLES stack, so /dev/dri alone cannot render.
+apt-get -y --no-install-recommends -o Dpkg::Options::=--force-confold \
+    -o APT::Keep-Downloaded-Packages=false -o Acquire::Retries=3 install \
+    libgl1-mesa-dri libegl-mesa0 libegl1 libgles2 libgbm1 mesa-utils
 apt-get clean
 '
 

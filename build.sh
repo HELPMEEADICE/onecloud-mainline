@@ -34,7 +34,7 @@ echo "kernel=$KVER release=$KREL jobs=$JOBS"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "missing host command: $1"; }
-for c in curl tar gzip xz make gcc flex bison perl openssl patch cpio debugfs dd; do
+for c in curl tar gzip xz make gcc flex bison perl openssl patch cpio debugfs dd depmod; do
     need "$c"
 done
 
@@ -101,11 +101,26 @@ echo "kernelrelease=$KERNELRELEASE"
 rm -rf "$ROOT/rootfs/modules-full"
 make -C "$SRC" O="$BUILD" modules_install INSTALL_MOD_PATH="$ROOT/rootfs/modules-full" INSTALL_MOD_STRIP=1 STRIP=arm-none-linux-gnueabihf-strip
 
+# make modules_install normally runs scripts/depmod.sh, but that step can
+# silently create nothing (for example when the host depmod was not found).
+# Without modules.dep/modules.alias modprobe and udev cannot load any module,
+# which in particular leaves the lima GPU driver unbound.  Regenerate the
+# database explicitly and make the build fail if it is missing.
+MODLIB="$ROOT/rootfs/modules-full/lib/modules/$KREL"
+depmod -ae -F "$BUILD/System.map" -b "$ROOT/rootfs/modules-full" "$KREL"
+[ -s "$MODLIB/modules.dep" ] || die "depmod did not create $MODLIB/modules.dep"
+[ -s "$MODLIB/modules.alias" ] || die "depmod did not create $MODLIB/modules.alias"
+
 "$ROOT/scripts/make-initramfs.sh" "$KREL" 8a03b678-0b46-4f41-bb09-3a2d154439bc \
     "$ROOT/build/initramfs-$KREL.cpio.gz"
 
 MKIMAGE="$ROOT/tools/localroot/usr/bin/mkimage"
-"$MKIMAGE" -A arm -O linux -T kernel -C none -a 0x20800000 -e 0x20800000 \
+# Use the same load/entry address as the working Armbian baseline uImage.
+# boot.scr loads the file at 0x20800000; bootm then relocates it to 0x208000.
+# 0x20800000 is also the value the old OneCloud U-Boot expects for a
+# non-relocated image, but staying identical to the known-good baseline
+# avoids relying on that path.
+"$MKIMAGE" -A arm -O linux -T kernel -C none -a 0x208000 -e 0x208000 \
     -n "Linux-$KREL" -d "$BUILD/arch/arm/boot/zImage" "$ROOT/build/uImage"
 "$MKIMAGE" -A arm -O linux -T ramdisk -C gzip -n uInitrd \
     -d "$ROOT/build/initramfs-$KREL.cpio.gz" "$ROOT/build/uInitrd"

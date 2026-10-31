@@ -40,7 +40,7 @@ fi
 section "kernel identity and architecture"
 check "zImage is ARM zImage" "file '$KERNEL/zImage' | grep -q 'Linux kernel ARM boot executable zImage'"
 check "uImage is ARM Linux kernel" "tools/localroot/usr/bin/mkimage -l '$KERNEL/uImage' | grep -q 'ARM Linux Kernel Image'"
-check "uImage load address 0x20800000" "tools/localroot/usr/bin/mkimage -l '$KERNEL/uImage' | grep -q 'Load Address: 20800000'"
+check "uImage load address 0x208000" "tools/localroot/usr/bin/mkimage -l '$KERNEL/uImage' | grep -q 'Load Address: 00208000'"
 check "uInitrd is ARM ramdisk" "tools/localroot/usr/bin/mkimage -l '$KERNEL/uInitrd' | grep -q 'ARM Linux RAMDisk Image'"
 if [ -f "$KERNELRELEASE_FILE" ]; then
     [ "$(cat "$KERNELRELEASE_FILE")" = "$KREL" ] && ok "kernelrelease=$KREL" || bad "kernelrelease mismatch"
@@ -51,7 +51,7 @@ section "kernel configuration"
 while read -r sym; do
     case "$sym" in
         NVMEM_MESON_MX_EFUSE|MESON_MX_SOCINFO|MESON_WATCHDOG|MESON_SARADC) want='[ym]' ;;
-        USB_STORAGE) want='[ym]' ;;
+        USB_STORAGE|DRM_LIMA) want='[ym]' ;;
         *) want='y' ;;
     esac
     check "CONFIG_$sym=$want" "grep -Eq '^CONFIG_$sym=$want$' '$KERNEL/config-$KREL'"
@@ -75,6 +75,7 @@ USB_STORAGE
 REGULATOR_PWM
 PWM_MESON
 CPUFREQ_DT
+DRM_LIMA
 NVMEM_MESON_MX_EFUSE
 MESON_MX_SOCINFO
 MESON_WATCHDOG
@@ -87,22 +88,31 @@ DTC="$KERNEL_BUILD/scripts/dtc/dtc"
 [ -x "$DTC" ] || DTC=$(command -v dtc || true)
 if [ -n "$DTC" ]; then
     "$DTC" -I dtb -O dts "$KERNEL/meson8b-onecloud.dtb" -o "$TMP/onecloud.dts" 2>"$TMP/dtc.err"
-    check "dtc decompile" "test -s '$TMP/onecloud.dts' && test ! -s '$TMP/dtc.err'"
+    # The legacy "/memory" node intentionally triggers a dtc
+    # unit_address_vs_reg warning; only the resulting DTS matters.
+    check "dtc decompile" "test -s '$TMP/onecloud.dts'"
     check "model Xunlei OneCloud" "grep -q 'model = \"Xunlei OneCloud\"' '$TMP/onecloud.dts'"
     check "compatible xunlei,onecloud" "grep -q 'compatible = \"xunlei,onecloud\"' '$TMP/onecloud.dts'"
-    check "memory@40000000 1 GiB" "grep -A4 'memory@40000000' '$TMP/onecloud.dts' | grep -q 'reg = <0x40000000 0x40000000>'"
+    check "legacy /memory node for U-Boot fixup" "grep -q '^	memory {' '$TMP/onecloud.dts'"
+    check "no memory@40000000 node" "! grep -q 'memory@40000000' '$TMP/onecloud.dts'"
+    check "/memory reg 1 GiB at 0x40000000" "grep -A4 '^	memory {' '$TMP/onecloud.dts' | grep -q 'reg = <0x40000000 0x40000000>'"
     check "eMMC sdhc enabled" "grep -A10 'mmc@8e00' '$TMP/onecloud.dts' | grep -q 'status = \"okay\"'"
     check "SDIO enabled" "grep -A10 'mmc@8c20' '$TMP/onecloud.dts' | grep -q 'status = \"okay\"'"
     check "Ethernet enabled" "grep -A20 'ethernet@c9410000' '$TMP/onecloud.dts' | grep -q 'status = \"okay\"'"
     check "USB0 host" "grep -A20 'usb@c9040000' '$TMP/onecloud.dts' | grep -q 'dr_mode = \"host\"'"
     check "PWM C/D enabled" "grep -A8 'pwm@8650' '$TMP/onecloud.dts' | grep -q 'status = \"okay\"'"
     check "serial0 console" "grep -A3 'chosen' '$TMP/onecloud.dts' | grep -q 'stdout-path = \"serial0:115200n8\"'"
+    check "Mali-450 GPU node" "grep -A8 'gpu@c0000' '$TMP/onecloud.dts' | grep -q 'arm,mali-450'"
+    check "Mali GPU node enabled" "! grep -A20 'gpu@c0000' '$TMP/onecloud.dts' | grep -q 'status = \"disabled\"'"
 else
     bad "no dtc available"
 fi
 
 section "modules and rootfs"
 check "module tree present" "test -d '$ROOT/rootfs/modules-full/lib/modules/$KREL'"
+check "modules.dep present" "test -s '$ROOT/rootfs/modules-full/lib/modules/$KREL/modules.dep'"
+check "modules.alias present" "test -s '$ROOT/rootfs/modules-full/lib/modules/$KREL/modules.alias'"
+check "lima GPU module present" "find '$ROOT/rootfs/modules-full/lib/modules/$KREL' -path '*/gpu/drm/lima/lima.ko*' | grep -q ."
 MOD=$(find "$ROOT/rootfs/modules-full/lib/modules/$KREL" -name 'usb-storage.ko*' | head -1)
 if [ -n "$MOD" ]; then
     check "usb-storage vermagic" "modinfo -F vermagic '$MOD' | grep -q '^$KREL '"
@@ -113,6 +123,8 @@ check "rootfs ext4 clean" "e2fsck -fn '$ROOT/rootfs/onecloud-rootfs.ext4'"
 check "rootfs Debian bookworm" "debugfs -R 'cat /etc/os-release' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'VERSION_CODENAME=bookworm'"
 check "rootfs systemd present" "debugfs -R 'stat /lib/systemd/systemd' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'regular'"
 check "rootfs module path" "debugfs -R 'stat /lib/modules/$KREL/kernel/drivers/usb/storage/usb-storage.ko' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'Size:'"
+check "rootfs module database" "debugfs -R 'stat /lib/modules/$KREL/modules.dep' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'Size:'"
+check "rootfs loads lima at boot" "debugfs -R 'cat /etc/modules-load.d/onecloud.conf' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -qx lima"
 check "rootfs eth0 DHCP" "debugfs -R 'cat /etc/systemd/network/10-ethernet.network' '$ROOT/rootfs/onecloud-rootfs.ext4' 2>/dev/null | grep -q 'DHCP=yes'"
 debugfs -R "dump /lib/systemd/systemd $TMP/systemd" "$ROOT/rootfs/onecloud-rootfs.ext4" >/dev/null 2>&1
 check "rootfs systemd is ARM EABI5" "file '$TMP/systemd' | grep -q 'ELF 32-bit LSB.*ARM.*EABI5'"

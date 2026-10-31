@@ -30,7 +30,7 @@ echo "=== OneCloud packaging $(date -u +%FT%TZ) ==="
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "missing host command: $1"; }
-for c in cp dd debugfs mkimage mcopy mdir img2simg simg2img sha1sum sha256sum xz tar; do need "$c"; done
+for c in cp dd debugfs depmod mkimage mcopy mdir img2simg simg2img sha1sum sha256sum xz tar; do need "$c"; done
 [ -x "$ROOT/tools/AmlImg" ] || die "missing tools/AmlImg; run scripts/bootstrap-tools.sh"
 [ -d "$ROOT/rootfs/modules-full/lib/modules/$KREL" ] || die "missing modules; run build.sh first"
 [ -f "$ROOT/build/uImage" ] && [ -f "$ROOT/build/uInitrd" ] || die "missing uImage/uInitrd; run build.sh first"
@@ -88,6 +88,13 @@ cp --reflink=auto "$ROOTFS_IMAGE" "$ROOT/rootfs/onecloud-rootfs.work.ext4" 2>/de
     cp "$ROOTFS_IMAGE" "$ROOT/rootfs/onecloud-rootfs.work.ext4"
 rm -f "$ROOT/rootfs/onecloud-rootfs.ext4"
 mv "$ROOT/rootfs/onecloud-rootfs.work.ext4" "$ROOT/rootfs/onecloud-rootfs.ext4"
+MODLIB="$ROOT/rootfs/modules-full/lib/modules/$KREL"
+if [ ! -s "$MODLIB/modules.dep" ] || [ ! -s "$MODLIB/modules.alias" ]; then
+    echo "module dependency database missing; running depmod"
+    depmod -ae -F "$KERNEL_BUILD/System.map" -b "$ROOT/rootfs/modules-full" "$KREL"
+fi
+[ -s "$MODLIB/modules.dep" ] || die "missing $MODLIB/modules.dep; rebuild modules (build.sh)"
+[ -s "$MODLIB/modules.alias" ] || die "missing $MODLIB/modules.alias; rebuild modules (build.sh)"
 python3 "$ROOT/scripts/copy-tree-to-ext4.py" \
     "$ROOT/rootfs/onecloud-rootfs.ext4" \
     "$ROOT/rootfs/modules-full/lib/modules/$KREL" \
@@ -145,10 +152,49 @@ BURN="$ROOT/build/OneCloud-Linux-$KVER-armhf.burn.img"
 rm -f "$BURN"
 "$ROOT/tools/AmlImg" pack "$BURN" "$BURN_DIR"
 
+# ---- optional GCC15 U-Boot payload variant --------------------------------
+# The old OneCloud U-Boot 2011.03 SPL/DDR-init code is timing sensitive and is
+# not reliably reproduced by modern GCC.  Keep the baseline SPL (first 32 KiB
+# of 4.bootloader.PARTITION) and only replace the compressed U-Boot proper
+# payload.  UBOOT_COMP.USB stays on the baseline so the USB burning tool can
+# always re-flash a board.
+UBOOT_VARIANT=${UBOOT_VARIANT:-1}
+BURN_UBOOT=""
+if [ "$UBOOT_VARIANT" = 1 ] && [ -s "$ROOT/output/uboot/u-boot-comp.bin" ]; then
+    UBOOT_CONVERT="$ROOT/build/u-boot-gcc15/build/tools/convert"
+    if [ -x "$UBOOT_CONVERT" ]; then
+        echo "building GCC15 U-Boot payload variant"
+        UBOOT_DIR="$ROOT/build/burn-package-uboot"
+        rm -rf "$UBOOT_DIR"
+        cp -a "$BURN_DIR" "$UBOOT_DIR"
+        head -c 32768 "$BURN_UNPACKED/4.bootloader.PARTITION" \
+            >"$ROOT/build/uboot-baseline-spl.bin"
+        "$UBOOT_CONVERT" --soc m8b \
+            -s "$ROOT/build/uboot-baseline-spl.bin" \
+            -i "$ROOT/output/uboot/u-boot-comp.bin" \
+            -o "$ROOT/build/u-boot-hybrid-gcc15.bin"
+        cp -f "$ROOT/build/uboot-baseline-spl.bin" "$ROOT/output/uboot/baseline-spl.bin"
+        cp -f "$ROOT/build/u-boot-hybrid-gcc15.bin" \
+            "$ROOT/output/uboot/u-boot-hybrid-gcc15.bin"
+        cp -f "$BURN_UNPACKED/1.UBOOT_COMP.USB" "$UBOOT_DIR/1.UBOOT_COMP.USB"
+        cp -f "$ROOT/build/u-boot-hybrid-gcc15.bin" "$UBOOT_DIR/4.bootloader.PARTITION"
+        printf 'sha1sum %s' \
+            "$(sha1sum "$UBOOT_DIR/4.bootloader.PARTITION" | cut -d' ' -f1)" \
+            >"$UBOOT_DIR/5.bootloader.VERIFY"
+        BURN_UBOOT="$ROOT/build/OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img"
+        rm -f "$BURN_UBOOT"
+        "$ROOT/tools/AmlImg" pack "$BURN_UBOOT" "$UBOOT_DIR"
+    else
+        echo "WARNING: missing $UBOOT_CONVERT; skipping GCC15 U-Boot variant" >&2
+    fi
+fi
+
 # ---- publish ---------------------------------------------------------------
 echo "publishing output"
 cp -f "$NORMAL" "$ROOT/output/OneCloud-Linux-$KVER-armhf.img"
 cp -f "$BURN" "$ROOT/output/OneCloud-Linux-$KVER-armhf.burn.img"
+[ -n "$BURN_UBOOT" ] && \
+    cp -f "$BURN_UBOOT" "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img"
 mkdir -p "$ROOT/output/kernel" "$ROOT/output/modules" "$ROOT/output/patches"
 cp -f "$ROOT/build/uImage" "$ROOT/build/uInitrd" "$ROOT/output/kernel/"
 cp -f "$KERNEL_BUILD/arch/arm/boot/zImage" "$ROOT/output/kernel/"
@@ -162,15 +208,21 @@ if [ "${COMPRESS:-1}" = 1 ]; then
     echo "compressing images (xz -T0 -${XZ_LEVEL:-6})"
     xz -T0 "-${XZ_LEVEL:-6}" -k -f "$ROOT/output/OneCloud-Linux-$KVER-armhf.img" \
         "$ROOT/output/OneCloud-Linux-$KVER-armhf.burn.img"
+    [ -n "$BURN_UBOOT" ] && xz -T0 "-${XZ_LEVEL:-6}" -k -f \
+        "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img"
 fi
 
 ( cd "$ROOT/output"
   for f in OneCloud-Linux-$KVER-armhf.img OneCloud-Linux-$KVER-armhf.burn.img \
-           OneCloud-Linux-$KVER-armhf.img.xz OneCloud-Linux-$KVER-armhf.burn.img.xz; do
+           OneCloud-Linux-$KVER-armhf.img.xz OneCloud-Linux-$KVER-armhf.burn.img.xz \
+           OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img \
+           OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz; do
       [ -f "$f" ] && sha256sum "$f" > "$f.sha256"
   done
   sha256sum OneCloud-Linux-$KVER-armhf.img OneCloud-Linux-$KVER-armhf.burn.img \
       OneCloud-Linux-$KVER-armhf.img.xz OneCloud-Linux-$KVER-armhf.burn.img.xz \
+      $( [ -n "$BURN_UBOOT" ] && echo OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img \
+      OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz ) \
       > SHA256SUMS 2>/dev/null || true
 )
 ls -lh "$ROOT/output"

@@ -19,7 +19,7 @@
 == kernel identity and architecture ==
   OK   zImage is ARM zImage
   OK   uImage is ARM Linux kernel
-  OK   uImage load address 0x20800000
+  OK   uImage load address 0x208000
   OK   uInitrd is ARM ramdisk
   OK   kernelrelease=7.3.1-onecloud
   OK   Local version -onecloud
@@ -54,7 +54,9 @@
   OK   dtc decompile
   OK   model Xunlei OneCloud
   OK   compatible xunlei,onecloud
-  OK   memory@40000000 1 GiB
+  OK   legacy /memory node for U-Boot fixup
+  OK   no memory@40000000 node
+  OK   /memory reg 1 GiB at 0x40000000
   OK   eMMC sdhc enabled
   OK   SDIO enabled
   OK   Ethernet enabled
@@ -66,7 +68,7 @@
   OK   module tree present
   OK   usb-storage vermagic
   OK   rootfs ext4 clean
-  OK   rootfs Debian trixie
+  OK   rootfs Debian bookworm
   OK   rootfs systemd present
   OK   rootfs module path
   OK   rootfs eth0 DHCP
@@ -111,15 +113,15 @@
   OK   boot sparse expands to original
   OK   rootfs sparse expands to original
   OK   boot sparse size 256 MiB
-  OK   rootfs sparse size 1136 MiB
+  OK   rootfs sparse size 1336 MiB
   OK   AmlImg repack byte-identical
 
 == capacity and patch reproducibility ==
   OK   burn image < 8 GB eMMC
   OK   normal image < 8 GB eMMC
-  burn image: 917799772 bytes (0.85 GiB)
-  disk image: 1476395008 bytes (1.38 GiB)
+  burn image: 1137641292 bytes (1.06 GiB)
+  disk image: 1686110208 bytes (1.57 GiB)
   OK   patches apply to pristine 7.3.1 files
 
-== result: 102 passed, 0 failed ==
+== result: 104 passed, 0 failed ==
 NOTE: this is static verification only; no OneCloud hardware was used.

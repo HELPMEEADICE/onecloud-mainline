@@ -16,8 +16,9 @@
 - 在 QEMU `virt` 通用平台补充验证：内核解压、initramfs、ext4 根文件系统、systemd、SSH、串口 getty 均正常，进入 `onecloud login:`。
 - 在真实玩客云上验证了 7.3.1 启动、eMMC 根文件系统、千兆以太网和 Mali-450 GPU：`lima` 开机自动加载，生成 `/dev/dri/card0`/`renderD128`，Mesa EGL/GLES2 渲染测试通过（`GL_RENDERER: Mali450`）。
 - 在真实玩客云上验证了 USB-A 口 host 枚举（USB 键盘）和 SD 卡槽的块设备读写；SD 卡槽测试卡的详细结论见第 8 节。
+- 修复了 eMMC 顺序读性能：`meson-mx-sdhc` 的块队列 `max_segments` 从 1 提升到 64，并用 128 KiB DMA bounce buffer 处理多段请求。真实玩客云上 128K/1M 顺序读从约 15 MiB/s 提升到约 75 MiB/s（约 5 倍），底层请求数从 32768 降到 1024；4K 小块保持不变，读回数据 SHA256 一致。详见 8.1 节。
 
-**实机验证范围：** 已确认启动链、eMMC、以太网、USB host、SD 卡块设备读写和 GPU 3D。HDMI 显示输出、WiFi、IR、CPU 调压/调频等仍未逐项验证。QEMU `virt` 使用通用 DTB，不能替代 Meson8b 外设验证。
+**实机验证范围：** 已确认启动链、eMMC、以太网、USB host、SD 卡块设备读写、GPU 3D 和 eMMC 顺序读性能修复。HDMI 显示输出、WiFi、IR、CPU 调压/调频等仍未逐项验证。QEMU `virt` 使用通用 DTB，不能替代 Meson8b 外设验证。
 
 ## 2. 实际采用的版本与来源
 
@@ -366,6 +367,110 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
   是预期提示：OneCloud 的 `VCC_CORE` 同时供给 CPU 和 GPU，DTS 故意不绑定
   `mali-supply`，避免 GPU DVFS 与 cpufreq 争抢同一个 PWM regulator。
   lima 仍正常初始化并按 OPP 调频。
+
+### eMMC 顺序读性能修复（2026-11-01）
+
+**问题与根因**
+
+实机 fio 基线显示，128 MiB 顺序读无论 `bs` 为 4K、64K、128K 还是 1M，
+底层块层请求数都恰好是 **32768 次，平均 4.0 KiB**；4K QD1 平均延迟约
+258 µs，1M QD1 平均约 67 ms（约 256 × 258 µs），说明 1 MiB 请求被拆成了
+256 个 4 KiB MMC 命令。
+
+源码定位确认：
+
+- `drivers/mmc/host/meson-mx-sdhc-mmc.c` 从未设置 `mmc->max_segs`，MMC
+  core 在 `mmc_alloc_host()` 中默认设为 1，块层因此只能把每个请求限制在
+  一个物理连续段（通常一页 4 KiB）。
+- `meson_mx_sdhc_start_cmd()` 只把 `sg_dma_address(cmd->data->sg)`（第一个
+  SG 段）写入 `MESON_SDHC_ADDR`；该控制器的内部 DMA 只有这一个地址寄存器，
+  不能直接遍历 SG 表。
+- 同一控制器的 Amlogic BSP 驱动使用 `max_segs = 1024` 和 512 KiB coherent
+  bounce buffer，验证了"多段请求 → 连续缓冲区 → 单地址 DMA"的可行性。
+
+**补丁 0004 的实现**
+
+- 保留单 SG 段（`sg_len == 1`）的直接 DMA 路径，小 I/O 和 SDIO 不额外拷贝。
+- 多 SG 段请求复制到 128 KiB bounce buffer：写方向在 DMA map 前
+  `sg_copy_to_buffer()`，读方向在 `dma_unmap_single()` 后
+  `sg_copy_from_buffer()`；cache 一致性由标准 DMA API 保证。
+- `max_segs = 64`、`max_seg_size = max_req_size = 128 KiB`、
+  `max_blk_count = max_req_size / 512 = 256`，保证来自块层和 SDIO 的请求
+  都不超过 bounce buffer，并让 SDIO 大传输也按单段下发。
+- bounce buffer 在 `probe()` 中用 `devm_kmalloc()` 分配一次；失败时回退到
+  `max_segs = 1`，不会让 probe 失败。
+- unmap 放在控制器 reset、FIFO flush 和 response read 之后；DMA map 失败
+  只让当前请求失败，不再永久写入 `host->error`。
+- 内存开销：每个 host 128 KiB bounce buffer；队列深度 64 × 64 个 SG 表项
+  约 100 KiB，对 1 GiB RAM 可忽略。
+
+**实测结果**
+
+同一台玩客云，eMMC 为 Samsung 8GME4R，HS200 8-bit 141.67 MHz；除标注外
+均为本次 3 次运行的均值：
+
+| 测试 | 修改前 | 修改后 | 提升 | 底层请求数（前 → 后） |
+|---|---:|---:|---:|---:|
+| 4K QD1 | 14.47 MiB/s | 14.69 MiB/s | 1.02× | 32768 → 32768 |
+| 64K QD1 | 15.06 MiB/s | 63.21 MiB/s | 4.2× | 32768 → 2048 |
+| 128K QD1 | 15.08 MiB/s | 75.13 MiB/s | 5.0× | 32768 → 1024 |
+| 1M QD1 | 15.07 MiB/s | 75.93 MiB/s | 5.0× | 32768 → 1024 |
+| 1M 256M | 15.6 MiB/s* | 73.56 MiB/s | 4.7× | 32768 → 2048 |
+| 4K QD16 | 15.4 MiB/s* | 15.69 MiB/s | 1.02× | 32768 → 32768 |
+
+\* 修改前的 1M 256M 与 4K QD16 使用任务开始时提供的原始实测数据；其余为
+本次基线复测。128K/1M 的平均请求大小从 4.0 KiB 变为 128.0 KiB。
+
+| 测试 | 修改前 mean / P99 | 修改后 mean / P99 |
+|---|---|---|
+| 4K QD1 | 258–260 µs / 432 µs | 255 µs / 403 µs |
+| 64K QD1 | 4.09–4.21 ms / 5.67–5.73 ms | 0.976 ms / 1.76 ms |
+| 128K QD1 | 8.20–8.42 ms / 11.2–11.3 ms | 1.65 ms / 3.03 ms |
+| 1M QD1 | 65.3–67.2 ms / 89.7 ms | 13.3 ms / 21.4 ms |
+
+eMMC 冷启动后复测：64K 62.65 MiB/s、128K 74.72 MiB/s、1M 74.85 MiB/s，
+与 USB 启动测试一致；1 GiB 长读 73.81 MiB/s。大请求的 `sys%` 从约
+16–18% 降到约 10–11%。
+
+**数据一致性与稳定性**
+
+- 在 eMMC 根文件系统上创建 128 MiB 临时文件，`O_DIRECT` 写入后
+  `drop_caches`，分别用 4K/64K/128K/1M O_DIRECT 读回：5 次 SHA256 全部为
+  `f001a3d31164a0ecf5036ae904cc492fb1d0184baf4ce4b6a4b39561fdfd3bc9`，
+  PASS；临时文件已删除。
+- 256 MiB `fio --rw=write --verify=crc32c --do_verify=1` 通过（rc=0）。
+- `/sys/kernel/debug/mmc1/err_stats` 所有计数器为 0；dmesg 无
+  CRC/timeout/reset/DMA 错误；4K/64K/128K/1M 各 3 次运行速度波动小。
+- 测试后确认 lima `/dev/dri/card0`、meson-drm `/dev/dri/card1`、
+  USB 存储和千兆网络均正常。
+
+**构建集成修复**
+
+- `patches/0001` 的 DTS hunk 长度从 407 修正为 424。原值会让 `patch` 在
+  干净 7.3.1 源码上静默截断新 DTS，丢掉 USB/IR 节点；`patches/0003` 的
+  DTS 末段 hunk 也相应调整为在完整 DTS 末尾追加 HDMI 节点。
+- `build.sh` 在补丁集 SHA256 变化时自动恢复 pristine 源码树并重新应用完整
+  补丁栈；补丁集不变时仍由 stamp 跳过，重复构建不会重复应用。
+- 从干净树应用 0001–0004 后生成的 DTB 与修复前构建的 DTB 反编译内容完全
+  一致；`verify.sh` 113 项通过。
+
+**限制与后续**
+
+- 4K QD1/QD16 基本不变（约 14.7/15.7 MiB/s）。4 KiB 请求本来就走直接 DMA，
+  本次补丁针对大请求合并，不改变小块随机性能。
+- 128K/1M 约 75 MiB/s，约为 141.67 MB/s 总线速率的 55%；64K 为 63 MiB/s，
+  128K 已进入平台期，主要受 eMMC 自身顺序读能力限制。继续增大
+  `max_req_size` 或调整 PDMA burst 的收益有限，且会增加 bounce 内存和
+  延迟，本次未做。
+- 写路径实测约 24.4 MiB/s（256 MiB fio write + CRC32C verify 通过），受
+  eMMC 写入能力限制；本次未针对写优化。
+- 驱动仍要求单个 SG 段在物理上连续（MMC core 的 SG 构造约定）；多段请求
+  一律 bounce。bounce buffer 的拷贝开销在 75 MiB/s 下约占 10% `sys` CPU。
+- 补丁仅修改 `meson-mx-sdhc` host 驱动，使用标准 DMA/scatterlist API，
+  checkpatch 为 0 errors / 0 warnings / 0 checks，设计有 BSP 驱动先例，
+  具备提交 linux-mmc 的条件。可讨论点：是否把 `max_blk_count` 限制拆成
+  单独补丁、bounce buffer 用 `devm_kmalloc` 还是 `dma_alloc_coherent`
+  （后者在 ARM32 上通常是非缓存，拷贝更慢）、以及 `max_segs` 取 32 还是 64。
 
 ## 9. 产物清单
 

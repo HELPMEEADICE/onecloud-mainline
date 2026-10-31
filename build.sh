@@ -69,12 +69,20 @@ fi
 
 apply_patch() {
     local p=$1
-    if patch -d "$SRC" -p1 --dry-run --silent <"$p" >/dev/null 2>&1; then
+    local report="$ROOT/logs/patch-$(basename "$p").log"
+    if patch -d "$SRC" --batch --forward -p1 --dry-run <"$p" >"$report" 2>&1; then
         echo "apply $(basename "$p")"
-        patch -d "$SRC" -p1 --silent <"$p"
-    elif patch -d "$SRC" -p1 -R --dry-run --silent <"$p" >/dev/null 2>&1; then
+        patch -d "$SRC" --batch --forward -p1 <"$p" >>"$report" 2>&1 || {
+            cat "$report" >&2
+            die "failed to apply $(basename "$p")"
+        }
+    elif patch -d "$SRC" --batch -R -p1 --dry-run <"$p" >"$report.reverse" 2>&1; then
         echo "already applied: $(basename "$p")"
     else
+        echo "=== patch dry-run failure: $(basename "$p") ===" >&2
+        cat "$report" >&2
+        echo "=== reverse dry-run failure ===" >&2
+        cat "$report.reverse" >&2
         die "cannot apply or reverse $(basename "$p")"
     fi
 }

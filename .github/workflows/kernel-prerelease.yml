@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Optional active stable/mainline kernel version'
+        description: 'Optional final kernel version (7.3.1 or newer)'
         required: false
         type: string
       include_uncompressed:
@@ -236,7 +236,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: onecloud-${{ env.KVER }}-disk-raw-${{ github.run_id }}-${{ github.run_attempt }}
-          path: output/OneCloud-Linux-${{ env.KVER }}-armhf.img
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -245,7 +247,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: onecloud-${{ env.KVER }}-burn-raw-${{ github.run_id }}-${{ github.run_attempt }}
-          path: output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 7

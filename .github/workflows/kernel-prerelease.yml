@@ -8,6 +8,11 @@ on:
         description: 'Optional active stable/mainline kernel version'
         required: false
         type: string
+      include_uncompressed:
+        description: 'Also upload raw IMG and burn IMG (about 2.8 GB)'
+        required: false
+        type: boolean
+        default: false
   pull_request:
     paths:
       - '.github/workflows/kernel-prerelease.yml'
@@ -92,6 +97,34 @@ jobs:
           set -euo pipefail
           ./verify.sh | tee "logs/verify-ci-${KVER}.log"
           (cd output && sha256sum -c SHA256SUMS)
+          test -s "output/OneCloud-Linux-${KVER}-armhf.img.xz"
+          test -s "output/OneCloud-Linux-${KVER}-armhf.burn.img.xz"
+          test -s "output/modules/modules-${KVER}-onecloud.tar.xz"
+          test -s output/kernel/uImage
+          test -s output/kernel/meson8b-onecloud.dtb
+      - name: Upload compressed firmware to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz.sha256
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz.sha256
+            output/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload kernel modules and device tree to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-kernel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/kernel/
+            output/modules/
+            output/patches/
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,7 +163,8 @@ jobs:
           fi
   publish:
     needs: [lint, detect]
-    if: needs.detect.outputs.fresh == 'true'
+    # Explicit manual builds always run, even when a release tag already exists.
+    if: github.event_name == 'workflow_dispatch' || needs.detect.outputs.fresh == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     permissions:
@@ -169,7 +203,54 @@ jobs:
           set -euo pipefail
           ./verify.sh | tee "logs/verify-ci-${KVER}.log"
           (cd output && sha256sum -c SHA256SUMS)
+          test -s "output/OneCloud-Linux-${KVER}-armhf.img.xz"
+          test -s "output/OneCloud-Linux-${KVER}-armhf.burn.img.xz"
+          test -s "output/modules/modules-${KVER}-onecloud.tar.xz"
+          test -s output/kernel/uImage
+          test -s output/kernel/meson8b-onecloud.dtb
+      - name: Upload compressed firmware to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.img.xz.sha256
+            output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img.xz.sha256
+            output/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload kernel modules and device tree to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-kernel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/kernel/
+            output/modules/
+            output/patches/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload raw disk IMG (manual opt-in)
+        if: github.event_name == 'workflow_dispatch' && inputs.include_uncompressed == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-disk-raw-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/OneCloud-Linux-${{ env.KVER }}-armhf.img
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload raw USB burning IMG (manual opt-in)
+        if: github.event_name == 'workflow_dispatch' && inputs.include_uncompressed == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: onecloud-${{ env.KVER }}-burn-raw-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/OneCloud-Linux-${{ env.KVER }}-armhf.burn.img
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
       - name: Create prerelease
+        if: needs.detect.outputs.fresh == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

@@ -79,7 +79,22 @@ apply_patch() {
         die "cannot apply or reverse $(basename "$p")"
     fi
 }
-for p in "$ROOT"/patches/*.patch; do apply_patch "$p"; done
+
+# Several patches touch the same files (for example 0001 adds the OneCloud DTS
+# and 0003 extends it).  Once 0003 is applied, 0001 can no longer be reversed,
+# so a plain forward/reverse probe cannot tell whether the stack is applied.
+# Record a stamp of the patch set after a successful application and skip the
+# whole stack when it still matches.
+PATCH_STAMP="$SRC/.onecloud-patches.sha256"
+patch_set_sha() {
+    cat "$ROOT"/patches/*.patch | sha256sum | cut -d' ' -f1
+}
+if [ -f "$PATCH_STAMP" ] && [ "$(cat "$PATCH_STAMP")" = "$(patch_set_sha)" ]; then
+    echo "patch stack already applied (stamp matches)"
+else
+    for p in "$ROOT"/patches/*.patch; do apply_patch "$p"; done
+    patch_set_sha >"$PATCH_STAMP"
+fi
 
 "$ROOT/scripts/bootstrap-tools.sh"
 need bc

@@ -49,6 +49,11 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
 ./verify.sh                # 静态校验输出产物
 ```
 
+补丁成功应用后会在 `src/linux-7.3.1-upstream/.onecloud-patches.sha256`
+记录补丁集哈希，重复运行 `build.sh` 时会跳过已应用的补丁。修改
+`patches/*.patch` 后请删除该文件并重新解压源码，否则旧的补丁栈可能与新
+补丁冲突。
+
 需要联网下载：
 
 - Linux 7.3.1：<https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.3.1.tar.xz>

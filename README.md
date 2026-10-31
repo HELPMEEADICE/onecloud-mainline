@@ -7,6 +7,9 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 > 当前状态：已在真实玩客云上验证 7.3.1 启动、eMMC 根文件系统、千兆以太网、
 > USB host（键盘）、Mali-450 GPU（lima 驱动 + Mesa）以及 HDMI 显示输出
 > （1920x1080 framebuffer console，颜色正常）。
+> eMMC 顺序读取已从约 15 MiB/s 提升到约 75 MiB/s（4K 小块不变），
+> 由补丁 0004 的 DMA bounce buffer 实现，详见
+> [BUILD_REPORT.md](BUILD_REPORT.md) 第 8.1 节。
 > 已修复的启动/驱动阻断点：DTS 的 `/memory` 节点名（U-Boot 2011.03
 > 内存 fixup 兼容性）、`uImage` 头部加载地址（与 Armbian 基线一致）、
 > 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载、
@@ -69,6 +72,12 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
   `/memory` 节点。
 - `patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`：新增 `xunlei`
   vendor prefix。
+- `patches/0003-drm-meson-add-Meson8b-VPU-HDMI-support.patch`：Meson8/8b/8m2
+  VPU、TranSwitch HDMI TX、VCLK 和 HDMI PHY 支持，并在 OneCloud DTS 中启用
+  HDMI。
+- `patches/0004-mmc-meson-mx-sdhc-optimize-dma-transfers.patch`：为 Meson MX
+  SDHC 增加 128 KiB DMA bounce buffer，使块层可以把多个物理页合并为一个
+  128 KiB MMC 命令；eMMC 顺序读从约 15 MiB/s 提升到约 75 MiB/s。
 - `patches-uboot/0001-u-boot-gcc15-build-compat.patch`：让 pinned U-Boot
   在 GCC 15 下可构建。注意：GCC15 重编的 SPL/DDR 初始化在实机上不可靠，
   实验镜像只替换 U-Boot proper payload，SPL/DDR 仍使用 Armbian 基线。

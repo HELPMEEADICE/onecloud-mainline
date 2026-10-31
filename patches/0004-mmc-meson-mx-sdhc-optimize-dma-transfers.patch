@@ -1,0 +1,285 @@
+From: HELPMEEADICE <HELPMEEADICE@users.noreply.github.com>
+Subject: [PATCH] mmc: meson-mx-sdhc: add DMA bounce buffer support
+
+The Meson MX SDHC controller's internal DMA engine is programmed with a
+single 32-bit address (MESON_SDHC_ADDR) for the whole data transfer.
+The driver therefore relied on the MMC core's default max_segs of 1,
+which makes the block layer split every request into a single
+physically contiguous segment.  In practice those segments are usually
+one 4 KiB page, so even a 1 MiB direct read is issued as 256 separate
+4 KiB MMC commands.  On an Amlogic S805 (Meson8b) eMMC this limits
+sequential reads to about 15 MiB/s.
+
+Advertise multiple segments and bounce requests that are not physically
+contiguous through a 128 KiB buffer that is DMA mapped with the standard
+DMA API.  Write requests are copied into the buffer before the DMA map,
+read requests are copied back after the DMA unmap.  Requests that
+already consist of one scatterlist entry are still programmed directly,
+so small I/O and SDIO transfers do not pay for an extra copy.  The
+buffer is allocated once in probe() with devm_kmalloc() and is freed
+automatically by the driver core.  If the allocation fails the driver
+falls back to single-segment requests.
+
+Keep max_blk_count within max_req_size as well.  This guarantees that
+every request fits into the bounce buffer and also makes the SDIO core
+split large transfers so that they fit into one scatterlist entry.
+
+The unmap is moved after the FIFO reset and the response read: the
+controller is quiesced before the DMA mapping is torn down, and for
+bounced reads the cache invalidation performed by dma_unmap_single()
+happens before the data is copied back to the scatterlist.  A DMA
+mapping failure is no longer stored in host->error, so a transient
+failure of one request does not disable the controller permanently.
+
+Signed-off-by: HELPMEEADICE <HELPMEEADICE@users.noreply.github.com>
+---
+diff --git a/drivers/mmc/host/meson-mx-sdhc-mmc.c b/drivers/mmc/host/meson-mx-sdhc-mmc.c
+--- a/drivers/mmc/host/meson-mx-sdhc-mmc.c
++++ b/drivers/mmc/host/meson-mx-sdhc-mmc.c
+@@ -16,6 +16,7 @@
+ #include <linux/property.h>
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/scatterlist.h>
+ #include <linux/types.h>
+ 
+ #include <linux/mmc/host.h>
+@@ -29,6 +30,12 @@
+ #define MESON_SDHC_MAX_BLK_SIZE					512
+ #define MESON_SDHC_NUM_TUNING_TRIES				10
+ 
++/*
++ * A 128 KiB request spans at most 33 pages when it is not page aligned.
++ * The extra entries give the block layer room to merge a full request.
++ */
++#define MESON_SDHC_MAX_SEGS					64
++
+ #define MESON_SDHC_WAIT_CMD_READY_SLEEP_US			1
+ #define MESON_SDHC_WAIT_CMD_READY_TIMEOUT_US			100000
+ #define MESON_SDHC_WAIT_BEFORE_SEND_SLEEP_US			1
+@@ -48,6 +55,17 @@
+ 	struct mmc_command		*cmd;
+ 	int				error;
+ 
++	/*
++	 * The controller has a single DMA address register, so requests that
++	 * are not physically contiguous have to be bounced through this
++	 * buffer.
++	 */
++	void				*bounce_buf;
++	size_t				bounce_buf_size;
++	dma_addr_t			dma_addr;
++	unsigned int			dma_len;
++	bool				dma_bounce;
++
+ 	struct regmap			*regmap;
+ 
+ 	struct clk			*pclk;
+@@ -220,8 +238,7 @@
+ 			   FIELD_PREP(MESON_SDHC_CTRL_PACK_LEN, pack_len));
+ 
+ 	if (cmd->data)
+-		regmap_write(host->regmap, MESON_SDHC_ADDR,
+-			     sg_dma_address(cmd->data->sg));
++		regmap_write(host->regmap, MESON_SDHC_ADDR, host->dma_addr);
+ 
+ 	meson_mx_sdhc_wait_cmd_ready(mmc);
+ 
+@@ -362,32 +379,97 @@
+ 
+ static int meson_mx_sdhc_map_dma(struct mmc_host *mmc, struct mmc_request *mrq)
+ {
++	struct meson_mx_sdhc_host *host = mmc_priv(mmc);
+ 	struct mmc_data *data = mrq->data;
+-	unsigned int dma_len;
++	enum dma_data_direction dir;
++	struct scatterlist *sg;
++	unsigned int len, total_len;
++	int i, nents;
+ 
+ 	if (!data)
+ 		return 0;
+ 
+-	dma_len = dma_map_sg(mmc_dev(mmc), data->sg, data->sg_len,
+-			     mmc_get_dma_dir(data));
+-	if (!dma_len) {
+-		dev_err(mmc_dev(mmc), "dma_map_sg failed\n");
++	dir = mmc_get_dma_dir(data);
++	len = data->blocks * data->blksz;
++	host->dma_len = len;
++	host->dma_bounce = false;
++
++	/*
++	 * A request that consists of a single scatterlist entry is already
++	 * contiguous from the controller's point of view and can be
++	 * programmed directly.  This is also the only case where transfers
++	 * larger than the advertised max_req_size may occur (SDIO).
++	 */
++	if (data->sg_len == 1 && data->sg->length >= len) {
++		nents = dma_map_sg(mmc_dev(mmc), data->sg, data->sg_len, dir);
++		if (!nents) {
++			dev_err(mmc_dev(mmc), "dma_map_sg failed\n");
++			return -ENOMEM;
++		}
++
++		host->dma_addr = sg_dma_address(data->sg);
++		return 0;
++	}
++
++	total_len = 0;
++	for_each_sg(data->sg, sg, data->sg_len, i)
++		total_len += sg->length;
++
++	if (!host->bounce_buf || len > host->bounce_buf_size ||
++	    total_len < len) {
++		dev_err(mmc_dev(mmc),
++			"cannot DMA %u bytes in %u segments\n",
++			len, data->sg_len);
++		return -EINVAL;
++	}
++
++	if (dir == DMA_TO_DEVICE) {
++		if (sg_copy_to_buffer(data->sg, data->sg_len, host->bounce_buf,
++				      len) != len) {
++			dev_err(mmc_dev(mmc),
++				"failed to copy data into the bounce buffer\n");
++			return -EIO;
++		}
++	}
++
++	host->dma_addr = dma_map_single(mmc_dev(mmc), host->bounce_buf, len,
++					dir);
++	if (dma_mapping_error(mmc_dev(mmc), host->dma_addr)) {
++		dev_err(mmc_dev(mmc), "dma_map_single failed\n");
+ 		return -ENOMEM;
+ 	}
+ 
++	host->dma_bounce = true;
++
+ 	return 0;
+ }
+ 
++static void meson_mx_sdhc_unmap_dma(struct meson_mx_sdhc_host *host,
++				    struct mmc_data *data)
++{
++	struct device *dev = mmc_dev(host->mmc);
++
++	if (host->dma_bounce) {
++		dma_unmap_single(dev, host->dma_addr, host->dma_len,
++				 mmc_get_dma_dir(data));
++		host->dma_bounce = false;
++	} else {
++		dma_unmap_sg(dev, data->sg, data->sg_len,
++			     mmc_get_dma_dir(data));
++	}
++}
++
+ static void meson_mx_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ {
+ 	struct meson_mx_sdhc_host *host = mmc_priv(mmc);
+ 	struct mmc_command *cmd = mrq->cmd;
++	int ret = 0;
+ 
+ 	if (!host->error)
+-		host->error = meson_mx_sdhc_map_dma(mmc, mrq);
++		ret = meson_mx_sdhc_map_dma(mmc, mrq);
+ 
+-	if (host->error) {
+-		cmd->error = host->error;
++	if (host->error || ret) {
++		cmd->error = host->error ? host->error : ret;
+ 		mmc_request_done(mmc, mrq);
+ 		return;
+ 	}
+@@ -596,11 +678,6 @@
+ 			regmap_update_bits(host->regmap, MESON_SDHC_PDMA, val,
+ 					   val);
+ 		}
+-
+-		dma_unmap_sg(mmc_dev(host->mmc), cmd->data->sg,
+-			     cmd->data->sg_len, mmc_get_dma_dir(cmd->data));
+-
+-		cmd->data->bytes_xfered = cmd->data->blksz * cmd->data->blocks;
+ 	}
+ 
+ 	meson_mx_sdhc_wait_cmd_ready(host->mmc);
+@@ -625,6 +702,40 @@
+ 		 */
+ 		meson_mx_sdhc_clear_fifo(host->mmc);
+ 
++	if (cmd->data) {
++		struct mmc_data *data = cmd->data;
++		size_t len = data->blksz * data->blocks;
++		bool bounced = host->dma_bounce;
++
++		/*
++		 * Unmap the data after the controller has been quiesced so
++		 * that neither the reset nor the FIFO flush can race with an
++		 * ongoing DMA transfer.  dma_unmap_single() (for bounced
++		 * reads) also invalidates the CPU caches, so the copy below
++		 * sees the data written by the controller.
++		 */
++		meson_mx_sdhc_unmap_dma(host, data);
++
++		if (!data->error) {
++			if (bounced && data->flags & MMC_DATA_READ) {
++				size_t copied;
++
++				copied = sg_copy_from_buffer(data->sg,
++							     data->sg_len,
++							     host->bounce_buf,
++							     len);
++				if (copied != len) {
++					dev_err(mmc_dev(host->mmc),
++						"failed to copy data from the bounce buffer\n");
++					data->error = -EIO;
++				}
++			}
++
++			if (!data->error)
++				data->bytes_xfered = len;
++		}
++	}
++
+ 	meson_mx_sdhc_request_done(host);
+ 
+ 	return IRQ_HANDLED;
+@@ -813,8 +924,17 @@
+ 
+ 	mmc->max_req_size = SZ_128K;
+ 	mmc->max_seg_size = mmc->max_req_size;
+-	mmc->max_blk_count = FIELD_GET(MESON_SDHC_SEND_TOTAL_PACK, ~0);
+ 	mmc->max_blk_size = MESON_SDHC_MAX_BLK_SIZE;
++	/*
++	 * The controller has a single DMA address register.  Allowing the
++	 * block layer to merge more segments is only safe because requests
++	 * consisting of multiple segments are bounced through a contiguous
++	 * buffer.  Keep every request within max_req_size so that it always
++	 * fits into that buffer; SDIO uses max_blk_count to split transfers
++	 * as well.
++	 */
++	mmc->max_blk_count = mmc->max_req_size / mmc->max_blk_size;
++	mmc->max_segs = MESON_SDHC_MAX_SEGS;
+ 	mmc->max_busy_timeout = 30 * MSEC_PER_SEC;
+ 	mmc->f_min = clk_round_rate(host->sd_clk, 1);
+ 	mmc->f_max = clk_round_rate(host->sd_clk, ULONG_MAX);
+@@ -823,6 +943,19 @@
+ 	mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_HW_RESET;
+ 	mmc->ops = &meson_mx_sdhc_ops;
+ 
++	host->bounce_buf = devm_kmalloc(dev, mmc->max_req_size, GFP_KERNEL);
++	if (host->bounce_buf) {
++		host->bounce_buf_size = mmc->max_req_size;
++	} else {
++		/*
++		 * Without the bounce buffer only physically contiguous
++		 * requests can be handled, so fall back to the old limit.
++		 */
++		mmc->max_segs = 1;
++		dev_warn(dev,
++			 "failed to allocate the DMA bounce buffer, using single-segment transfers\n");
++	}
++
+ 	ret = mmc_of_parse(mmc);
+ 	if (ret)
+ 		goto err_disable_pclk;

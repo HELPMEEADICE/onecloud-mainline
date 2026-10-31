@@ -99,6 +99,15 @@ patch_set_sha() {
 if [ -f "$PATCH_STAMP" ] && [ "$(cat "$PATCH_STAMP")" = "$(patch_set_sha)" ]; then
     echo "patch stack already applied (stamp matches)"
 else
+    if [ -f "$PATCH_STAMP" ]; then
+        # The patch set changed.  Several patches touch the same files, so
+        # an already patched tree cannot be updated reliably in place.
+        # Restore the pristine tree and apply the complete new stack.
+        echo "patch set changed, restoring pristine linux-$KVER"
+        rm -rf "$SRC"
+        tar -xf "$KERNEL_TAR" -C "$ROOT/src"
+        mv "$ROOT/src/linux-$KVER" "$SRC"
+    fi
     for p in "$ROOT"/patches/*.patch; do apply_patch "$p"; done
     patch_set_sha >"$PATCH_STAMP"
 fi

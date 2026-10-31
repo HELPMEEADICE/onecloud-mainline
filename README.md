@@ -5,12 +5,13 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 打包/校验脚本，以及完整的构建与刷机文档。
 
 > 当前状态：已在真实玩客云上验证 7.3.1 启动、eMMC 根文件系统、千兆以太网、
-> Mali-450 GPU（lima 驱动 + Mesa）以及 HDMI 显示输出（1920x1080 framebuffer
-> console，颜色正常）。
+> USB host（键盘）、Mali-450 GPU（lima 驱动 + Mesa）以及 HDMI 显示输出
+> （1920x1080 framebuffer console，颜色正常）。
 > 已修复的启动/驱动阻断点：DTS 的 `/memory` 节点名（U-Boot 2011.03
 > 内存 fixup 兼容性）、`uImage` 头部加载地址（与 Armbian 基线一致）、
-> 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载，
-> 以及 HDMI 移植中的 HHI `ranges`、DRM bridge 分配 API 和 HHI 可选访问问题。
+> 根文件系统缺少 `modules.dep`/`modules.alias` 导致模块（含 GPU 驱动）无法加载、
+> USB0 的 host 模式触发 PHY ACA/ID 检查导致 dwc2 probe 失败，以及 HDMI
+> 移植中的 HHI `ranges`、DRM bridge 分配 API 和 HHI 可选访问问题。
 > 详见 [BUILD_REPORT.md](BUILD_REPORT.md)。
 
 ## 文档
@@ -26,7 +27,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 .
 ├── build.sh              # 内核 / DTB / 模块 / initramfs / uImage 构建
 ├── package.sh            # 生成 .img、.burn.img、.xz 与 SHA256
-├── verify.sh             # 112 项静态校验（不写块设备）
+├── verify.sh             # 113 项静态校验（不写块设备）
 ├── config/
 │   ├── onecloud.fragment         # 叠加在 multi_v7_defconfig 上的内核配置
 │   ├── onecloud-7.3.1.config     # 最终完整内核配置
@@ -63,13 +64,29 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
 ## 补丁
 
 - `patches/0001-ARM-dts-meson8b-add-Xunlei-OneCloud.patch`：新增
-  `meson8b-onecloud.dts`，适配 7.x 的 PWM v2 与 USB 模式，并保留 U-Boot
-  2011.03 内存 fixup 能识别的 legacy `/memory` 节点。
+  `meson8b-onecloud.dts`，适配 7.x 的 PWM v2 与 USB 模式（USB0 使用 OTG +
+  role-switch，见下文），并保留 U-Boot 2011.03 内存 fixup 能识别的 legacy
+  `/memory` 节点。
 - `patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`：新增 `xunlei`
   vendor prefix。
 - `patches-uboot/0001-u-boot-gcc15-build-compat.patch`：让 pinned U-Boot
   在 GCC 15 下可构建。注意：GCC15 重编的 SPL/DDR 初始化在实机上不可靠，
   实验镜像只替换 U-Boot proper payload，SPL/DDR 仍使用 Armbian 基线。
+
+## USB（DWC2 host）
+
+- OneCloud 面向用户的 USB-A 口接在 **USB0（`c9040000.usb`，OTG 控制器）**
+  上，不是 USB1。USB1（`c90c0000.usb`）为 host-only 控制器。
+- 如果把 USB0 设成 `dr_mode = "host"`，`phy-meson8b-usb2` 会执行 ACA/ID
+  检测；本板 ID 引脚悬空，检测返回 `USB ID detect failed`，PHY
+  `power_on` 失败（`-EINVAL`），整个 dwc2 probe 中止，端口完全不可用。
+- 正确做法与 Armbian 6.12 一致：USB0 使用 `dr_mode = "otg"` +
+  `usb-role-switch` + `role-switch-default-mode = "host"`。OTG 模式下 PHY
+  跳过 ACA 检查，dwc2 注册 role switch 并默认以 host 角色工作。7.3.1 主线
+  的 DWC2 已内建这套 API，**不需要** Armbian 的 connector 补丁。
+- 实机验证：USB-A 口插入 `CASUE USB KB` 键盘后正常枚举，生成
+  `/dev/input/event1`～`event3`（键盘、Consumer Control、System Control）。
+  USB 存储使用 `usb-storage` 模块，走相同的 host 路径。
 
 ## HDMI 显示（Meson8b VPU + TranSwitch HDMI TX）
 

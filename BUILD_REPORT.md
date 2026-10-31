@@ -9,14 +9,15 @@
 本次工程完成了以下实际工作：
 
 - 从 **kernel.org 官方 stable 7.3.1** 源码构建了 ARM32 `zImage`、`uImage`、`meson8b-onecloud.dtb` 和 1078 个内核模块。
-- 将 Armbian 社区 6.12 的 OneCloud 设备树移植到 7.3.1，修正了 7.x 下已变化的 PWM v2、memory 节点和 USB 模式描述。
+- 将 Armbian 社区 6.12 的 OneCloud 设备树移植到 7.3.1，修正了 7.x 下已变化的 PWM v2、memory 节点和 USB 模式（USB0 改为 OTG + role-switch，见 4.3 节）。
 - 使用 **Armbian 26.08.0 OneCloud Bookworm Minimal** 的 Debian ARMHF 根文件系统和原版引导链，集成新内核、模块和最小 initramfs。
 - 生成了可导入 Amlogic USB Burning Tool 的 `.burn.img`，并生成普通磁盘 `.img`、`.xz` 和 SHA256 校验文件。
-- 完成 112 项静态校验，全部通过；`AmlImg` 解包、重新打包与最终镜像 **逐字节一致**。
+- 完成 113 项静态校验，全部通过；`AmlImg` 解包、重新打包与最终镜像 **逐字节一致**。
 - 在 QEMU `virt` 通用平台补充验证：内核解压、initramfs、ext4 根文件系统、systemd、SSH、串口 getty 均正常，进入 `onecloud login:`。
 - 在真实玩客云上验证了 7.3.1 启动、eMMC 根文件系统、千兆以太网和 Mali-450 GPU：`lima` 开机自动加载，生成 `/dev/dri/card0`/`renderD128`，Mesa EGL/GLES2 渲染测试通过（`GL_RENDERER: Mali450`）。
+- 在真实玩客云上验证了 USB-A 口 host 枚举（USB 键盘）和 SD 卡槽的块设备读写；SD 卡槽测试卡的详细结论见第 8 节。
 
-**实机验证范围：** 已确认启动链、eMMC、以太网和 GPU 3D。HDMI 显示输出、WiFi、IR、USB host 枚举、CPU 调压/调频等仍未逐项验证。QEMU `virt` 使用通用 DTB，不能替代 Meson8b 外设验证。
+**实机验证范围：** 已确认启动链、eMMC、以太网、USB host、SD 卡块设备读写和 GPU 3D。HDMI 显示输出、WiFi、IR、CPU 调压/调频等仍未逐项验证。QEMU `virt` 使用通用 DTB，不能替代 Meson8b 外设验证。
 
 ## 2. 实际采用的版本与来源
 
@@ -142,8 +143,21 @@ DDR 初始化代码对编译器和时序非常敏感，上游 CI 本身使用的
    - 保留 `pwm_cd` 的 `pwm_c1_pins`/`pwm_d_pins` 和 `status = "okay"`，供 CPU 核心电压 `pwm-regulator` 使用。
 
 3. **USB**
-   - 旧 Armbian DTS 使用 `dr_mode = "otg"` + `usb-role-switch` + `role-switch-default-mode = "host"`。
-   - 7.3.1 主线没有 Armbian 6.12 中的 USB role-switch/DWC2 connector 补丁；为避免依赖未移植的 API，改成明确的 `dr_mode = "host"`，两个 DWC2 控制器均作为 host 使用，满足 USB 存储、键盘、USB 启动等需求。
+   - OneCloud 的 USB-A 口接在 **USB0（`c9040000.usb`，OTG 控制器）** 上；
+     USB1（`c90c0000.usb`）是另一个 host-only 控制器。
+   - 旧 Armbian DTS 使用 `dr_mode = "otg"` + `usb-role-switch` +
+     `role-switch-default-mode = "host"`。移植时曾误以为 7.3.1 缺少
+     DWC2 role-switch 支持，改成 `dr_mode = "host"`，结果 USB-A 口完全失效：
+     PHY 在 host 模式下执行 ACA/ID 检测，本板 ID 引脚悬空，返回
+     `USB ID detect failed`，`phy poweron` 失败（`-EINVAL`），dwc2 probe
+     中止（`dwc2 c9040000.usb: probe with driver dwc2 failed with error -22`）。
+   - 7.3.1 主线 `drivers/usb/dwc2/drd.c` **已经实现** `usb-role-switch` 和
+     `role-switch-default-mode`，不需要 Armbian 的 connector 补丁。恢复为
+     `dr_mode = "otg"` + `usb-role-switch` + `role-switch-default-mode = "host"`：
+     OTG 模式让 PHY 跳过 ACA 检查，dwc2 注册 role switch 并默认以 host 角色
+     工作。USB1 保持 `dr_mode = "host"`。
+   - 实机验证：USB-A 口插入 `CASUE USB KB` 键盘后正常枚举，生成
+     `/dev/input/event1`～`event3`，`lsusb` 可见 `2a7a:939f`。
 
 4. **厂商前缀**
    - 在 `Documentation/devicetree/bindings/vendor-prefixes.yaml` 增加 `"^xunlei,.*"`，避免 `make dtbs_check` 的厂商前缀警告。保存为 `patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`。
@@ -179,7 +193,9 @@ HDMI 驱动以模块形式构建，由 `/etc/modules-load.d/onecloud.conf` 在�
 
 未移植的内容及原因：
 
-- **USB OTG role-switch**：依赖 Armbian 的 DWC2 connector 补丁，7.3.1 未合并；改为 host 模式，牺牲 OTG peripheral 功能。
+- **USB OTG peripheral 模式**：USB0 已使用 `usb-role-switch` 并默认 host；
+  本板 ID 引脚悬空、没有 OTG 连接器或角色切换源，因此 peripheral/gadget
+  角色未验证，host 角色已实机验证。
 - **IR 遥控器**：DTS 保留了 `&ir_receiver`，但本次配置中 `CONFIG_IR_MESON` 未被 Kconfig 接受（最终 `.config` 中没有该符号），因此没有 `meson-ir` 模块；不影响启动。
 - **WiFi SDIO**：OneCloud 的 SDIO WiFi 需要额外芯片/固件支持，本次未配置；SD 卡槽本身可用。
 
@@ -277,7 +293,7 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
 
 验证脚本：`verify.sh`，日志：`logs/verify-gpu.log`。
 
-**112 项通过，0 项失败**，包括：
+**113 项通过，0 项失败**，包括：
 
 - 官方 7.3.1 源码 SHA256 与 kernel.org 校验值一致。
 - `zImage` 为 ARM zImage；`uImage` 为 ARM Linux Kernel Image，load address `0x208000`；`uInitrd` 为 ARM ramdisk。
@@ -325,6 +341,21 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
   `glGetError=0`。
 - GPU devfreq：当前 255 MHz，可用频率
   255/364.285/425/510/637.5 MHz。
+- USB host（2026-11-01）：USB0 恢复 `dr_mode = "otg"` + `usb-role-switch` +
+  `role-switch-default-mode = "host"` 后，USB-A 口插入 `CASUE USB KB` 键盘
+  正常枚举（`lsusb` 显示 `2a7a:939f`），生成 `/dev/input/event1`～`event3`
+  （键盘、Consumer Control、System Control）。修复前 USB0 probe 报
+  `USB ID detect failed` / `-22`，端口没有 root hub。
+- SD 卡槽（2026-11-01）：`mmc0`（`amlogic,meson8b-sdio` + `mmc-slot`）能
+  识别 SD 卡并完成 4-bit 块设备读写。测试用卡的 CID/CSD 在两次初始化间
+  不一致：一次报 SanDisk 32GB（CSD v2.0、2021 年产），读错误后回退为
+  32MB `SD032`（CSD v1.0、2006 年产）；32MB 回退模式下全卡 30.6MiB
+  连续读取两次 MD5 一致（`80d0116c...`，约 7.6MB/s），证明卡槽和驱动的
+  数据通路正常；32GB 模式下块读取会超时或极慢。该卡全卡内容为 0x88、
+  没有分区表，回退身份的产品序列号为 `0xffffffff`，判断为扩容/异常卡。
+  换用正常 SD 卡即可作为存储使用；此类异常卡在开机分区扫描时可能长时间
+  占用 udev，甚至让 `/boot` 设备超时进入 emergency mode，建议不要长期
+  插在机器里开机。
 - 实机 `/lib/modules/7.3.1-onecloud/modules.dep` 和 `modules.alias` 的 SHA256
   与最终镜像内文件完全一致（`0c3bfa56...` / `04074733...`），说明镜像内的
   模块依赖库就是实机验证通过的那一份。
@@ -342,12 +373,12 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
 
 | 文件 | 大小（字节） | SHA256 |
 |---|---:|---|
-| `OneCloud-Linux-7.3.1-armhf.burn.img` | 1,246,726,296 | `7975f17c116d2b7d92bc9c421b4911de28d396b53a7a2bb31ef65e3650554c35` |
-| `OneCloud-Linux-7.3.1-armhf.burn.img.xz` | 384,171,504 | `e9d8289cbfe6c83b33d9e1b0e26200a45b649be18515807a3009b8c86cb7ef81` |
-| `OneCloud-Linux-7.3.1-armhf.img` | 1,686,110,208 | `74ede4599d8d7b415a2615d72f5017b6d8a8c8ce46af9e64c1e5aa64cf2d7a4e` |
-| `OneCloud-Linux-7.3.1-armhf.img.xz` | 384,272,592 | `368a021d78bd4ff28ae558c8b604cabc3b6fb1ce870fb51e844b10260354119a` |
-| `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img` | 1,246,717,036 | `8ad5e07b9a4d06280055195e8026c62f2053bdddc78b892f5e68090308becc18` |
-| `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz` | 384,382,756 | `c461ca761b2eb53a87b495397a5ecbc8cff2c3c8d5fc8d1c2c00286c243cb11e` |
+| `OneCloud-Linux-7.3.1-armhf.burn.img` | 1,246,959,768 | `05cfa5f8d52a9332621b99e7d77d2d73664cfba290ffe3f72d5c52cc3b7736bb` |
+| `OneCloud-Linux-7.3.1-armhf.burn.img.xz` | 384,138,584 | `689cfdeb3852906094ca192d575bb998b07368ada6a6fba6f75ae13c773b76ac` |
+| `OneCloud-Linux-7.3.1-armhf.img` | 1,686,110,208 | `f31ca8f66d5b7446a8f299d8216b38c9e482bc34d34eef9d49e4d1ec490ce640` |
+| `OneCloud-Linux-7.3.1-armhf.img.xz` | 384,327,012 | `e38f6bfca27dc9433513ca0f3720013aae1818f808b2aab6b540d9b66f5a2292` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img` | 1,246,950,508 | `4cdb172ef404401f638dfd21ec9c0585cc60b0c15b774121a944ca537d9d3155` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz` | 384,479,904 | `3da845522d88b28dc0dee0a13d62b36b866a529ad3b34c50335fe07f148027f1` |
 
 同时包含：
 
@@ -365,13 +396,17 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
 ## 10. 尚未解决/需要实机确认的问题
 
 1. **实机验证范围仍有限。** 已在真实玩客云（私网地址已隐去）验证 7.3.1
-   启动、eMMC 根文件系统、千兆以太网、Mali-450 GPU 3D 和 HDMI 1920x1080
-   显示（含 HPD/EDID）。尚未逐项确认：
-   - USB host 枚举与热插拔；
+   启动、eMMC 根文件系统、千兆以太网、USB host 枚举、Mali-450 GPU 3D、
+   HDMI 1920x1080 显示（含 HPD/EDID）以及 SD 卡槽的块设备读写/拔插识别。
+   尚未逐项确认：
+   - USB 设备热插拔与 USB 存储大文件读写；
    - RTL8211F RGMII 时序和高负载下的长期稳定性；
    - CPU 核心电压 PWM regulator 与 cpufreq/GPU devfreq 的长期稳定性；
-   - SD 卡热插拔；
    - HDMI 音频和 4K 输出（S805 HDMI PHY 上限约 1.65 GHz）。
+   
+   SD 卡槽本身工作正常，但本次实机使用的 32GB 卡是扩容/异常卡（双身份、
+   32GB 模式读超时、内容全 0x88），相关分析和风险见第 8 节；这属于卡的问题，
+   不是 `meson-mx-sdio` 驱动或 DTS 的问题。
 
    已修复的两个启动阻断点（legacy `/memory` 节点、`uImage` 加载地址
    `0x208000`）均已在实机启动中验证通过。

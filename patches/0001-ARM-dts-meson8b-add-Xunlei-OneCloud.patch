@@ -402,7 +402,17 @@
 +
 +&usb0 {
 +	status = "okay";
-+	dr_mode = "host";
++
++	/*
++	 * The OneCloud USB-A port is wired to the OTG controller.
++	 * Host mode makes the PHY run its ACA/ID check, which fails on
++	 * this board (floating ID pin) and aborts the whole dwc2 probe.
++	 * Use OTG mode with a role switch defaulting to host instead, so
++	 * the PHY skips the ACA check but the port still acts as a host.
++	 */
++	dr_mode = "otg";
++	usb-role-switch;
++	role-switch-default-mode = "host";
 +};
 +
 +&usb0_phy {

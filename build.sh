@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Linux 7.3.1 + OneCloud (Amlogic S805 / Meson8b) kernel, modules,
+# Build released upstream Linux kernels + OneCloud (Amlogic S805 / Meson8b) kernel, modules,
 # DTB, initramfs and uImage.  Run as an ordinary user; no root required.
 #
 # Environment:
@@ -12,6 +12,7 @@ set -euo pipefail
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 if [ ! -d "$ROOT/src" ] && [ -d "$ROOT/../src" ]; then ROOT=$(CDPATH= cd -- "$ROOT/.." && pwd); fi
 KVER=${KVER:-7.3.1}
+[[ "$KVER" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "ERROR: KVER must be a final upstream kernel version" >&2; exit 2; }
 KREL=${KREL:-${KVER}-onecloud}
 JOBS=${JOBS:-$(nproc)}
 ARCH=arm
@@ -33,7 +34,7 @@ echo "kernel=$KVER release=$KREL jobs=$JOBS"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "missing host command: $1"; }
-for c in curl tar gzip xz make gcc flex bison perl openssl patch cpio debugfs dd depmod; do
+for c in curl tar gzip xz make gcc flex bison perl openssl patch cpio debugfs dd depmod gpg sha256sum; do
     need "$c"
 done
 

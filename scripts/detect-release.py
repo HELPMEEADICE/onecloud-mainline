@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select latest official final Linux release, or requested active version."""
+"""Select the latest active kernel or an explicitly requested signed release."""
 import json
 import os
 import re
@@ -12,6 +12,12 @@ def parse(v):
     return tuple(map(int, v.split("."))) + (0,) * (3 - len(v.split(".")))
 
 def select(data, requested=""):
+    # Explicit versions may be older than the current releases.json entries.
+    # fetch-kernel.sh still authenticates the archive via SHA256 and PGP.
+    if requested:
+        if parse(requested) < (7, 3, 1):
+            raise ValueError("requested version must be at least 7.3.1")
+        return requested
     valid = {}
     for release in data["releases"]:
         v = release.get("version", "")
@@ -23,10 +29,6 @@ def select(data, requested=""):
             continue
         if n >= (7, 3, 1):
             valid[v] = n
-    if requested:
-        if requested not in valid:
-            raise ValueError("requested kernel is not an active stable/mainline release")
-        return requested
     if not valid:
         raise ValueError("no supported stable/mainline release")
     return max(valid, key=valid.get)

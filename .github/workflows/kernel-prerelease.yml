@@ -31,13 +31,36 @@ jobs:
           set -euo pipefail
           bash -n build.sh package.sh verify.sh scripts/*.sh
           python3 -m unittest discover -s scripts/tests -v
-  integration-build:
-    # A real full build on the PR branch, without publishing untested firmware.
+  rootfs-apt-smoke:
     if: github.event_name == 'pull_request'
     needs: lint
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ARMHF emulation and rootfs tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-user-static e2fsprogs util-linux curl xz-utils ca-certificates
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - name: Test signed ARMHF apt-get update
+        run: bash scripts/smoke-rootfs-apt.sh
+      - name: Record disk space on failure
+        if: failure()
+        run: df -h . /tmp
+
+  integration-build:
+    # A real full build on the PR branch, without publishing untested firmware.
+    if: github.event_name == 'pull_request'
+    needs: [lint, rootfs-apt-smoke]
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
+      ROOTFS_EXECUTOR: chroot
       KVER: '7.3.1'
       JOBS: '4'
       BUILD_UBOOT: '0'
@@ -56,6 +79,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev perl patch cpio e2fsprogs kmod xz-utils curl file git gnupg dirmngr ca-certificates mtools u-boot-tools android-sdk-libsparse-utils qemu-user-static proot fakeroot util-linux device-tree-compiler
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
       - name: Build signed kernel, modules, DTB
         run: PACKAGE=0 ./build.sh
       - name: Build rootfs and both flash images
@@ -109,6 +136,7 @@ jobs:
     permissions:
       contents: write
     env:
+      ROOTFS_EXECUTOR: chroot
       KVER: ${{ needs.detect.outputs.version }}
       TAG: ${{ needs.detect.outputs.tag }}
       JOBS: '4'
@@ -128,6 +156,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential flex bison bc libssl-dev libelf-dev perl patch cpio e2fsprogs kmod xz-utils curl file git gnupg dirmngr ca-certificates mtools u-boot-tools android-sdk-libsparse-utils qemu-user-static proot fakeroot util-linux device-tree-compiler
+      - name: Register ARM QEMU binfmt interpreter
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
       - name: Build kernel
         run: PACKAGE=0 ./build.sh
       - name: Package flash images

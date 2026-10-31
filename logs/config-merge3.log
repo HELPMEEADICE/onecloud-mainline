@@ -1,0 +1,17 @@
+Using build/linux-7.3.1/.config as base
+Merging config/onecloud.fragment
+Value of CONFIG_FAT_DEFAULT_IOCHARSET is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_FAT_DEFAULT_IOCHARSET="ascii"
+New value: CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
+
+Value of CONFIG_NLS_DEFAULT is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_NLS_DEFAULT="iso8859-1"
+New value: CONFIG_NLS_DEFAULT="utf8"
+
+Value of CONFIG_NLS_ASCII is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_NLS_ASCII is not set
+New value: CONFIG_NLS_ASCII=y
+
+#
+# merged configuration written to /home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1/.config (needs make)
+#

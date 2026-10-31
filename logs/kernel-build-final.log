@@ -1,0 +1,7 @@
+make: 进入目录“/home/hedc/OneCloud/onecloud-mainline/src/linux-7.3.1-upstream”
+make[1]: 进入目录“/home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1”
+  SYNC    include/config/auto.conf
+  Kernel: arch/arm/boot/Image is ready
+  Kernel: arch/arm/boot/zImage is ready
+make[1]: 离开目录“/home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1”
+make: 离开目录“/home/hedc/OneCloud/onecloud-mainline/src/linux-7.3.1-upstream”

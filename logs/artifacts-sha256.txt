@@ -1,0 +1,4 @@
+3ec0113af5154a2573b3851d74d9e9501a805abf9dfa0f82b04ef26fa0e6fc35  tools/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
+2579b47034cb784e0b8bda852d7ef320cb3925003ea4392edc6efe162890583c  tools/busybox-static.deb
+a3e471a56bfc51bc89eea9046a167f702b66f8b91d837c0630a7a9abc2024e54  baseline/Armbian-25.05.0-Onecloud-trixie-minimal.img.xz
+90eb7b7074ea92616c0525285b52ed166b662e8610f251bc0ddc9918a786629e  baseline/Armbian-25.05.0-Onecloud-trixie-minimal.burn.img.xz

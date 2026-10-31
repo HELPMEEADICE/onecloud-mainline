@@ -1,0 +1,12 @@
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY

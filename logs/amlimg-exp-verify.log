@@ -1,0 +1,12 @@
+Extracting  build/uboot-exp-verify/0.DDR.USB
+Extracting  build/uboot-exp-verify/1.UBOOT_COMP.USB
+Extracting  build/uboot-exp-verify/2.aml_sdc_burn.ini
+Extracting  build/uboot-exp-verify/3.platform.conf
+Extracting  build/uboot-exp-verify/4.bootloader.PARTITION
+Extracting  build/uboot-exp-verify/5.bootloader.VERIFY
+Extracting  build/uboot-exp-verify/6.resource.PARTITION
+Extracting  build/uboot-exp-verify/7.resource.VERIFY
+Extracting  build/uboot-exp-verify/8.boot.PARTITION.sparse
+Extracting  build/uboot-exp-verify/9.boot.VERIFY
+Extracting  build/uboot-exp-verify/10.rootfs.PARTITION.sparse
+Extracting  build/uboot-exp-verify/11.rootfs.VERIFY

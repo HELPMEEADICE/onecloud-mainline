@@ -1,0 +1,12 @@
+Extracting  build/verify-burn/0.DDR.USB
+Extracting  build/verify-burn/1.UBOOT_COMP.USB
+Extracting  build/verify-burn/2.aml_sdc_burn.ini
+Extracting  build/verify-burn/3.platform.conf
+Extracting  build/verify-burn/4.bootloader.PARTITION
+Extracting  build/verify-burn/5.bootloader.VERIFY
+Extracting  build/verify-burn/6.resource.PARTITION
+Extracting  build/verify-burn/7.resource.VERIFY
+Extracting  build/verify-burn/8.boot.PARTITION.sparse
+Extracting  build/verify-burn/9.boot.VERIFY
+Extracting  build/verify-burn/10.rootfs.PARTITION.sparse
+Extracting  build/verify-burn/11.rootfs.VERIFY

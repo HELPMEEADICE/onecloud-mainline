@@ -1,0 +1,2 @@
+cf9ef8e58037eccc51c29b846c5cd9be2fdadea6241323ed3565f4c3096dac20  Armbian_26.08.0_Onecloud_bookworm_current_6.12.28_minimal.img.xz
+a02c00898a16b1543d6ef052d21128b16ca127ad2a3d12f54e5337d80bdcec17  Armbian_26.08.0_Onecloud_bookworm_current_6.12.28_minimal.burn.img.xz

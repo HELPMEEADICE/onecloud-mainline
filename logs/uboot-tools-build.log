@@ -1,0 +1,27 @@
+make -C tools all
+make[1]: 进入目录“/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools”
+/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/common/env_embedded.c:28:10: fatal error: config.h：没有那个文件或目录
+   28 | #include <config.h>
+      |          ^~~~~~~~~~
+compilation terminated.
+/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools/envcrc.c:35:10: fatal error: config.h：没有那个文件或目录
+   35 | #include <config.h>
+      |          ^~~~~~~~~~
+compilation terminated.
+gcc -g -Wall -Wstrict-prototypes -O1 -fomit-frame-pointer -std=gnu89 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/include -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include2 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/libfdt -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools -DCONFIG_SYS_TEXT_BASE= -DUSE_HOSTCC -D__KERNEL_STRICT_NAMES -c -o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/crc32.o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/crc32.c
+gcc -Wall -Wstrict-prototypes -O1 -fomit-frame-pointer -std=gnu89 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/include -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include2 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/libfdt -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools -DCONFIG_SYS_TEXT_BASE= -DUSE_HOSTCC -D__KERNEL_STRICT_NAMES   -o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/default_image.o default_image.c -c
+gcc -Wall -Wstrict-prototypes -O1 -fomit-frame-pointer -std=gnu89 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/include -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include2 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/libfdt -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools -DCONFIG_SYS_TEXT_BASE= -DUSE_HOSTCC -D__KERNEL_STRICT_NAMES   -o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/fit_image.o fit_image.c -c
+gcc -g -Wall -Wstrict-prototypes -O1 -fomit-frame-pointer -std=gnu89 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/include -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include2 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/libfdt -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools -DCONFIG_SYS_TEXT_BASE= -DUSE_HOSTCC -D__KERNEL_STRICT_NAMES -c -o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/image.o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/common/image.c
+/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/common/image.c: 在函数‘calculate_hash’中:
+/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/common/image.c:2501:17: warning: 隐式声明函数‘sha1_csum_wd’ [-Wimplicit-function-declaration]
+ 2501 |                 sha1_csum_wd ((unsigned char *) data, data_len,
+      |                 ^~~~~~~~~~~~
+gcc -Wall -Wstrict-prototypes -O1 -fomit-frame-pointer -std=gnu89 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/include -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include2 -idirafter /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/include -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/lib/libfdt -I /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools -DCONFIG_SYS_TEXT_BASE= -DUSE_HOSTCC -D__KERNEL_STRICT_NAMES   -o /home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/imximage.o imximage.c -c
+In file included from imximage.c:33:
+imximage.h:27:10: fatal error: config.h：没有那个文件或目录
+   27 | #include <config.h>
+      |          ^~~~~~~~~~
+compilation terminated.
+make[1]: *** [/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/rules.mk:42：/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/build/tools/imximage.o] 错误 1
+make[1]: 离开目录“/home/hedc/OneCloud/onecloud-mainline/src/u-boot-onecloud/tools”
+make: *** [Makefile:810：tools] 错误 2

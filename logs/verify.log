@@ -1,0 +1,124 @@
+
+== artifacts and checksums ==
+  OK   exists OneCloud-Linux-7.3.1-armhf.img
+  OK   exists OneCloud-Linux-7.3.1-armhf.burn.img
+  OK   exists OneCloud-Linux-7.3.1-armhf.img.xz
+  OK   exists OneCloud-Linux-7.3.1-armhf.burn.img.xz
+  OK   exists zImage
+  OK   exists uImage
+  OK   exists uInitrd
+  OK   exists meson8b-onecloud.dtb
+  OK   exists config-7.3.1-onecloud
+  OK   exists System.map-7.3.1-onecloud
+  OK   exists modules-7.3.1-onecloud.tar.xz
+  OK   exists SHA256SUMS
+  OK   SHA256SUMS
+  OK   img.xz integrity
+  OK   burn.img.xz integrity
+
+== kernel identity and architecture ==
+  OK   zImage is ARM zImage
+  OK   uImage is ARM Linux kernel
+  OK   uImage load address 0x20800000
+  OK   uInitrd is ARM ramdisk
+  OK   Local version -onecloud
+
+== kernel configuration ==
+  OK   CONFIG_ARCH_MESON=y
+  OK   CONFIG_MACH_MESON8=y
+  OK   CONFIG_SMP=y
+  OK   CONFIG_PINCTRL_MESON8B=y
+  OK   CONFIG_COMMON_CLK_MESON8B=y
+  OK   CONFIG_MMC_MESON_MX_SDHC=y
+  OK   CONFIG_MMC_MESON_MX_SDIO=y
+  OK   CONFIG_MMC_BLOCK=y
+  OK   CONFIG_PWRSEQ_EMMC=y
+  OK   CONFIG_EXT4_FS=y
+  OK   CONFIG_SERIAL_MESON_CONSOLE=y
+  OK   CONFIG_DWMAC_MESON=y
+  OK   CONFIG_REALTEK_PHY=y
+  OK   CONFIG_PHY_MESON8B_USB2=y
+  OK   CONFIG_USB_DWC2=y
+  OK   CONFIG_USB_STORAGE=[ym]
+  OK   CONFIG_REGULATOR_PWM=y
+  OK   CONFIG_PWM_MESON=y
+  OK   CONFIG_CPUFREQ_DT=y
+  OK   CONFIG_NVMEM_MESON_MX_EFUSE=[ym]
+  OK   CONFIG_MESON_MX_SOCINFO=[ym]
+  OK   CONFIG_MESON_WATCHDOG=[ym]
+  OK   CONFIG_DEVTMPFS_MOUNT=y
+  OK   CONFIG_BLK_DEV_INITRD=y
+
+== device tree ==
+  OK   dtc decompile
+  OK   model Xunlei OneCloud
+  OK   compatible xunlei,onecloud
+  OK   memory@40000000 1 GiB
+  OK   eMMC sdhc enabled
+  OK   SDIO enabled
+  OK   Ethernet enabled
+  OK   USB0 host
+  OK   PWM C/D enabled
+  OK   serial0 console
+
+== modules and rootfs ==
+  OK   module tree present
+  OK   usb-storage vermagic
+  OK   rootfs ext4 clean
+  OK   rootfs Debian trixie
+  OK   rootfs systemd present
+  OK   rootfs module path
+  OK   rootfs eth0 DHCP
+  OK   rootfs systemd is ARM EABI5
+  OK   rootfs fstab UUID
+
+== boot partition ==
+  OK   FAT filesystem
+  OK   boot FAT UUID preserved
+  OK   uImage in boot FAT
+  OK   uInitrd in boot FAT
+  OK   onecloud DTB in boot FAT
+  OK   armbianEnv root UUID
+  OK   boot.scr is U-Boot script
+  OK   boot.scr loads uImage
+  OK   boot.scr loads uInitrd
+  OK   boot.scr loads onecloud dtb
+  OK   boot.scr bootm triplet
+
+== normal disk image ==
+  OK   MBR partition table
+  OK   boot starts at sector 32768
+  OK   rootfs starts at sector 557056
+  OK   boot partition UUID
+  OK   rootfs partition UUID
+  OK   normal boot bytes
+  OK   normal rootfs bytes
+
+== Amlogic burn image ==
+  OK   AmlImg unpack
+  OK   manifest order
+  OK   boot sparse manifest
+  OK   rootfs sparse manifest
+  OK   0.DDR.USB unchanged
+  OK   1.UBOOT_COMP.USB unchanged
+  OK   2.aml_sdc_burn.ini unchanged
+  OK   3.platform.conf unchanged
+  OK   4.bootloader.PARTITION unchanged
+  OK   6.resource.PARTITION unchanged
+  OK   boot VERIFY sha1
+  OK   rootfs VERIFY sha1
+  OK   boot sparse expands to original
+  OK   rootfs sparse expands to original
+  OK   boot sparse size 256 MiB
+  OK   rootfs sparse size 1136 MiB
+  OK   AmlImg repack byte-identical
+
+== capacity and patch reproducibility ==
+  OK   burn image < 8 GB eMMC
+  OK   normal image < 8 GB eMMC
+  burn image: 917783444 bytes (0.85 GiB)
+  disk image: 1476395008 bytes (1.38 GiB)
+  OK   patches apply to pristine 7.3.1 files
+
+== result: 101 passed, 0 failed ==
+NOTE: this is static verification only; no OneCloud hardware was used.

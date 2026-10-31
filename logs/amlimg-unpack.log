@@ -1,0 +1,12 @@
+Extracting  burn-unpacked/0.DDR.USB
+Extracting  burn-unpacked/1.UBOOT_COMP.USB
+Extracting  burn-unpacked/2.aml_sdc_burn.ini
+Extracting  burn-unpacked/3.platform.conf
+Extracting  burn-unpacked/4.bootloader.PARTITION
+Extracting  burn-unpacked/5.bootloader.VERIFY
+Extracting  burn-unpacked/6.resource.PARTITION
+Extracting  burn-unpacked/7.resource.VERIFY
+Extracting  burn-unpacked/8.boot.PARTITION.sparse
+Extracting  burn-unpacked/9.boot.VERIFY
+Extracting  burn-unpacked/10.rootfs.PARTITION.sparse
+Extracting  burn-unpacked/11.rootfs.VERIFY

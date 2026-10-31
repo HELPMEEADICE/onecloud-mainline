@@ -1,0 +1,51 @@
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/0.DDR.USB
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/1.UBOOT_COMP.USB
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/2.aml_sdc_burn.ini
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/3.platform.conf
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/4.bootloader.PARTITION
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/5.bootloader.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/6.resource.PARTITION
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/7.resource.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/8.boot.PARTITION.sparse
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/9.boot.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/10.rootfs.PARTITION.sparse
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/unpack/11.rootfs.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/0.DDR.USB
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/1.UBOOT_COMP.USB
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/2.aml_sdc_burn.ini
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/3.platform.conf
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/4.bootloader.PARTITION
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/5.bootloader.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/6.resource.PARTITION
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/7.resource.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/8.boot.PARTITION.sparse
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/9.boot.VERIFY
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/10.rootfs.PARTITION.sparse
+Extracting  /home/hedc/OneCloud/onecloud-mainline/tmp/verify-uboot.ojSDP0/main/11.rootfs.VERIFY
+  OK   UBOOT_COMP is 15.2 build
+  OK   bootloader is 15.2 build
+  OK   bootloader VERIFY sha1
+  OK   0.DDR.USB unchanged
+  OK   2.aml_sdc_burn.ini unchanged
+  OK   3.platform.conf unchanged
+  OK   6.resource.PARTITION unchanged
+  OK   7.resource.VERIFY unchanged
+  OK   8.boot.PARTITION.sparse matches main
+  OK   9.boot.VERIFY matches main
+  OK   10.rootfs.PARTITION.sparse matches main
+  OK   11.rootfs.VERIFY matches main
+Packing  0.DDR.USB
+Packing  1.UBOOT_COMP.USB
+Packing  2.aml_sdc_burn.ini
+Packing  3.platform.conf
+Packing  4.bootloader.PARTITION
+Packing  5.bootloader.VERIFY
+Packing  6.resource.PARTITION
+Packing  7.resource.VERIFY
+Packing  8.boot.PARTITION.sparse
+Packing  9.boot.VERIFY
+Packing  10.rootfs.PARTITION.sparse
+Packing  11.rootfs.VERIFY
+  OK   AmlImg repack byte-identical
+  OK   image < 8 GB eMMC
+== U-Boot experimental image: all checks passed ==

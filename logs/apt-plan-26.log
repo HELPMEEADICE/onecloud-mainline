@@ -1,0 +1,27 @@
+armbian-bsp-cli-onecloud-current 26.08.0-trunk
+linux-base 4.12.1~deb12u1
+linux-dtb-current-meson 26.08.0-trunk
+linux-image-current-meson 26.08.0-trunk
+u-boot-tools 2023.01+dfsg-2+deb12u3
+util-linux-extra 2.38.1-5+deb12u3
+---
+Conf python3.11 (3.11.2-6+deb12u9 Debian-Security:12/oldstable-security [armhf])
+Conf libpython3.11-stdlib (3.11.2-6+deb12u9 Debian-Security:12/oldstable-security [armhf])
+Conf python3.11-minimal (3.11.2-6+deb12u9 Debian-Security:12/oldstable-security [armhf])
+Conf libpython3.11-minimal (3.11.2-6+deb12u9 Debian-Security:12/oldstable-security [armhf])
+Conf libexpat1 (2.5.0-1+deb12u5 Debian-Security:12/oldstable-security [armhf])
+Conf tzdata (2026f-0+deb12u1 Debian-Security:12/oldstable-security [all])
+Conf openssl (3.0.22-1~deb12u2 Debian-Security:12/oldstable-security [armhf])
+Conf ca-certificates (20250419~deb12u2 Debian-Security:12/oldstable-security [all])
+Conf xz-utils (5.4.1-1+deb12u2 Debian-Security:12/oldstable-security [armhf])
+Conf armbian-bsp-cli-onecloud-current (26.8.3 Armbian:bookworm [armhf])
+Conf jq (1.6-2.1+deb12u3 Debian-Security:12/oldstable-security [armhf])
+Conf libjq1 (1.6-2.1+deb12u3 Debian-Security:12/oldstable-security [armhf])
+Conf armbian-config (26.8.0-trunk.426.1030.032129 armbian.github.io/configurator:github.armbian.com [all])
+Conf armbian-firmware (26.8.3 Armbian:bookworm [all])
+Conf libbrotli1 (1.0.9-2+deb12u1 Debian-Security:12/oldstable-security [armhf])
+Conf libsasl2-modules-db (2.1.28+dfsg-10+deb12u1 Debian-Security:12/oldstable-security [armhf])
+Conf libsasl2-2 (2.1.28+dfsg-10+deb12u1 Debian-Security:12/oldstable-security [armhf])
+Conf libssh2-1 (1.10.0-3+deb12u1 Debian-Security:12/oldstable-security [armhf])
+Conf linux-dtb-current-meson (26.8.3 Armbian:bookworm [armhf])
+Conf linux-image-current-meson (26.8.3 Armbian:bookworm [armhf])

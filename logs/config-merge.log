@@ -1,0 +1,93 @@
+Using build/linux-7.3.1/.config as base
+Merging config/onecloud.fragment
+Value of CONFIG_LOCALVERSION is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_LOCALVERSION=""
+New value: CONFIG_LOCALVERSION="-onecloud"
+
+Value of CONFIG_DEFAULT_HOSTNAME is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_DEFAULT_HOSTNAME="(none)"
+New value: CONFIG_DEFAULT_HOSTNAME="onecloud"
+
+Value of CONFIG_CGROUP_SCHED is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_CGROUP_SCHED is not set
+New value: CONFIG_CGROUP_SCHED=y
+
+Value of CONFIG_CGROUP_FREEZER is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_CGROUP_FREEZER is not set
+New value: CONFIG_CGROUP_FREEZER=y
+
+Value of CONFIG_CGROUP_DEVICE is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_CGROUP_DEVICE is not set
+New value: CONFIG_CGROUP_DEVICE=y
+
+Value of CONFIG_CGROUP_CPUACCT is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_CGROUP_CPUACCT is not set
+New value: CONFIG_CGROUP_CPUACCT=y
+
+Value of CONFIG_USER_NS is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_USER_NS is not set
+New value: CONFIG_USER_NS=y
+
+Value of CONFIG_CMDLINE is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_CMDLINE=""
+New value: CONFIG_CMDLINE="console=ttyAML0,115200n8"
+
+Value of CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL is not set
+New value: CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+
+Value of CONFIG_NETFILTER is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_NETFILTER is not set
+New value: CONFIG_NETFILTER=y
+
+Value of CONFIG_BRIDGE is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_BRIDGE=m
+New value: CONFIG_BRIDGE=y
+
+Value of CONFIG_VLAN_8021Q is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_VLAN_8021Q is not set
+New value: CONFIG_VLAN_8021Q=y
+
+Value of CONFIG_TUN is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_TUN is not set
+New value: CONFIG_TUN=y
+
+Value of CONFIG_GENERIC_ADC_THERMAL is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_GENERIC_ADC_THERMAL=m
+New value: CONFIG_GENERIC_ADC_THERMAL=y
+
+Value of CONFIG_RC_CORE is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_RC_CORE is not set
+New value: CONFIG_RC_CORE=m
+
+Value of CONFIG_USB_HID is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_USB_HID=y
+New value: CONFIG_USB_HID=m
+
+Value of CONFIG_USB_STORAGE is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_USB_STORAGE=y
+New value: CONFIG_USB_STORAGE=m
+
+Value of CONFIG_RTC_DRV_MESON is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_RTC_DRV_MESON is not set
+New value: CONFIG_RTC_DRV_MESON=y
+
+Value of CONFIG_PWM_MESON is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_PWM_MESON=m
+New value: CONFIG_PWM_MESON=y
+
+Value of CONFIG_OVERLAY_FS is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_OVERLAY_FS is not set
+New value: CONFIG_OVERLAY_FS=y
+
+Value of CONFIG_FAT_DEFAULT_IOCHARSET is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+New value: CONFIG_FAT_DEFAULT_IOCHARSET="ascii"
+
+Value of CONFIG_DEBUG_INFO_NONE is redefined by fragment config/onecloud.fragment:
+Previous value: # CONFIG_DEBUG_INFO_NONE is not set
+New value: CONFIG_DEBUG_INFO_NONE=y
+
+#
+# merged configuration written to /home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1/.config (needs make)
+#

@@ -1,0 +1,5 @@
+Using build/linux-7.3.1/.config as base
+Merging config/onecloud.fragment
+#
+# merged configuration written to /home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1/.config (needs make)
+#

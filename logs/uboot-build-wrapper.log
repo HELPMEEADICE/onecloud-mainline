@@ -1,0 +1,4 @@
+U-Boot artifacts written to /home/hedc/OneCloud/onecloud-mainline/output/uboot
+-rwxr-xr-x 1 hedc hedc  12K 10月31日 19:03 /home/hedc/OneCloud/onecloud-mainline/output/uboot/ddr_init.bin
+-rw-r--r-- 1 hedc hedc 329K 10月31日 19:03 /home/hedc/OneCloud/onecloud-mainline/output/uboot/u-boot.bin
+-rw-r--r-- 1 hedc hedc 297K 10月31日 19:03 /home/hedc/OneCloud/onecloud-mainline/output/uboot/u-boot-comp.bin

@@ -1,0 +1,21 @@
+make: 进入目录“/home/hedc/OneCloud/onecloud-mainline/src/linux-7.3.1-upstream”
+make[1]: 进入目录“/home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1”
+  UPD     /home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1/Makefile
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  HOSTCC  scripts/kconfig/confdata.o
+  HOSTCC  scripts/kconfig/expr.o
+  LEX     scripts/kconfig/lexer.lex.c
+  YACC    scripts/kconfig/parser.tab.[ch]
+  HOSTCC  scripts/kconfig/lexer.lex.o
+  HOSTCC  scripts/kconfig/menu.o
+  HOSTCC  scripts/kconfig/parser.tab.o
+  HOSTCC  scripts/kconfig/preprocess.o
+  HOSTCC  scripts/kconfig/symbol.o
+  HOSTCC  scripts/kconfig/util.o
+  HOSTLD  scripts/kconfig/conf
+#
+# configuration written to .config
+#
+make[1]: 离开目录“/home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1”
+make: 离开目录“/home/hedc/OneCloud/onecloud-mainline/src/linux-7.3.1-upstream”

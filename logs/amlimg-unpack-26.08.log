@@ -1,0 +1,12 @@
+Extracting  burn-unpacked-26.08/0.DDR.USB
+Extracting  burn-unpacked-26.08/1.UBOOT_COMP.USB
+Extracting  burn-unpacked-26.08/2.aml_sdc_burn.ini
+Extracting  burn-unpacked-26.08/3.platform.conf
+Extracting  burn-unpacked-26.08/4.bootloader.PARTITION
+Extracting  burn-unpacked-26.08/5.bootloader.VERIFY
+Extracting  burn-unpacked-26.08/6.resource.PARTITION
+Extracting  burn-unpacked-26.08/7.resource.VERIFY
+Extracting  burn-unpacked-26.08/8.boot.PARTITION.sparse
+Extracting  burn-unpacked-26.08/9.boot.VERIFY
+Extracting  burn-unpacked-26.08/10.rootfs.PARTITION.sparse
+Extracting  burn-unpacked-26.08/11.rootfs.VERIFY

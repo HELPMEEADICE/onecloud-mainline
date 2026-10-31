@@ -1,0 +1,40 @@
+# Build inputs, intermediates and outputs — never commit binaries
+/baseline/
+/build/
+/output/
+/rootfs/
+/tmp/
+/tools/
+/src/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Binary artifacts and archives
+*.img
+*.img.xz
+*.burn.img
+*.ext4
+*.vfat
+*.bin
+*.deb
+*.pkg.tar.*
+*.tar
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.xz
+*.zst
+*.zip
+*.7z
+*.o
+*.a
+*.so
+*.ko
+*.pyc
+
+# Editor / OS noise
+.DS_Store
+*~
+*.swp

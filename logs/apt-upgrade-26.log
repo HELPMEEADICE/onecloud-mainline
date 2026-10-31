@@ -1,0 +1,60 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Calculating upgrade...
+The following packages have been kept back:
+  armbian-bsp-cli-onecloud-current linux-dtb-current-meson
+  linux-image-current-meson
+The following packages will be upgraded:
+  armbian-config armbian-firmware base-files ca-certificates jq libbrotli1
+  libexpat1 libjq1 liblzma5 libpcre2-8-0 libperl5.36 libpython3.11-minimal
+  libpython3.11-stdlib libsasl2-2 libsasl2-modules-db libssh2-1 libssl3
+  openssl perl perl-base perl-modules-5.36 python3.11 python3.11-minimal
+  tzdata xz-utils
+25 upgraded, 0 newly installed, 0 to remove and 3 not upgraded.
+Need to get 163 MB of archives.
+After this operation, 7168 B disk space will be freed.
+Get:1 http://security.debian.org bookworm-security/main armhf libperl5.36 armhf 5.36.0-7+deb12u4 [3512 kB]
+Get:3 https://github.armbian.com/configng stable/main armhf armbian-config all 26.8.0-trunk.426.1030.032129 [1202 kB]
+Get:4 http://security.debian.org bookworm-security/main armhf perl armhf 5.36.0-7+deb12u4 [239 kB]
+Get:2 http://apt.armbian.com bookworm/bookworm-utils armhf base-files armhf 26.8.3-12.4+deb12u15-bookworm [53.1 kB]
+Get:5 http://security.debian.org bookworm-security/main armhf perl-base armhf 5.36.0-7+deb12u4 [1466 kB]
+Get:7 http://security.debian.org bookworm-security/main armhf perl-modules-5.36 all 5.36.0-7+deb12u4 [2817 kB]
+Get:6 http://mirror.twds.com.tw/armbian-apt bookworm/main armhf armbian-firmware all 26.8.3 [144 MB]
+Get:8 http://security.debian.org bookworm-security/main armhf libssl3 armhf 3.0.22-1~deb12u2 [1685 kB]
+Get:9 http://security.debian.org bookworm-security/main armhf python3.11 armhf 3.11.2-6+deb12u9 [575 kB]
+Get:10 http://security.debian.org bookworm-security/main armhf libpython3.11-stdlib armhf 3.11.2-6+deb12u9 [1681 kB]
+Get:11 http://security.debian.org bookworm-security/main armhf python3.11-minimal armhf 3.11.2-6+deb12u9 [1716 kB]
+Get:12 http://security.debian.org bookworm-security/main armhf libpython3.11-minimal armhf 3.11.2-6+deb12u9 [806 kB]
+Get:13 http://security.debian.org bookworm-security/main armhf liblzma5 armhf 5.4.1-1+deb12u2 [193 kB]
+Get:14 http://security.debian.org bookworm-security/main armhf libexpat1 armhf 2.5.0-1+deb12u5 [85.8 kB]
+Get:15 http://security.debian.org bookworm-security/main armhf libpcre2-8-0 armhf 10.42-1+deb12u2 [227 kB]
+Get:16 http://security.debian.org bookworm-security/main armhf tzdata all 2026f-0+deb12u1 [308 kB]
+Get:17 http://security.debian.org bookworm-security/main armhf openssl armhf 3.0.22-1~deb12u2 [1409 kB]
+Get:18 http://security.debian.org bookworm-security/main armhf ca-certificates all 20250419~deb12u2 [161 kB]
+Get:19 http://security.debian.org bookworm-security/main armhf xz-utils armhf 5.4.1-1+deb12u2 [469 kB]
+Get:20 http://security.debian.org bookworm-security/main armhf jq armhf 1.6-2.1+deb12u3 [64.2 kB]
+Get:21 http://security.debian.org bookworm-security/main armhf libjq1 armhf 1.6-2.1+deb12u3 [133 kB]
+Get:22 http://security.debian.org bookworm-security/main armhf libbrotli1 armhf 1.0.9-2+deb12u1 [269 kB]
+Get:23 http://security.debian.org bookworm-security/main armhf libsasl2-modules-db armhf 2.1.28+dfsg-10+deb12u1 [19.0 kB]
+Get:24 http://security.debian.org bookworm-security/main armhf libsasl2-2 armhf 2.1.28+dfsg-10+deb12u1 [52.4 kB]
+Get:25 http://security.debian.org bookworm-security/main armhf libssh2-1 armhf 1.10.0-3+deb12u1 [160 kB]
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+	LANGUAGE = (unset),
+	LC_ALL = (unset),
+	LANG = "zh_CN.UTF-8"
+    are supported and installed on your system.
+perl: warning: Falling back to the standard locale ("C").
+locale: Cannot set LC_CTYPE to default locale: No such file or directory
+locale: Cannot set LC_MESSAGES to default locale: No such file or directory
+locale: Cannot set LC_ALL to default locale: No such file or directory
+Preconfiguring packages ...
+Fetched 163 MB in 9s (17.7 MB/s)
+dpkg: unrecoverable fatal error, aborting:
+ unknown system group 'crontab' in statoverride file; the system group got removed
+before the override, which is most probably a packaging bug, to recover you
+can remove the override manually with dpkg-statoverride
+W: No sandbox user '_apt' on the system, can not drop privileges
+E: Sub-process /usr/bin/dpkg returned an error code (2)
+APT_RC=100

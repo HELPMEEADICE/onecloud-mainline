@@ -1,0 +1,36 @@
+oc/ti/snd-soc-omap-mcpdm.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-mcpdm.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-mcpdm.ko gid 0
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko
+Allocated inode: 27256
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-omap-twl4030.ko gid 0
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko
+Allocated inode: 27257
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-edma.ko gid 0
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko
+Allocated inode: 27258
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-sdma.ko gid 0
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko
+Allocated inode: 27259
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/soc/ti/snd-soc-ti-udma.ko gid 0
+debugfs: mkdir /lib/modules/7.3.1-onecloud/kernel/sound/usb
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko
+Allocated inode: 27261
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usb-audio.ko gid 0
+debugfs: write rootfs/modules-full/lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko
+Allocated inode: 27262
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko mode 0100644
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko uid 0
+debugfs: sif /lib/modules/7.3.1-onecloud/kernel/sound/usb/snd-usbmidi-lib.ko gid 0
+
+copied 1092 files to rootfs/onecloud-rootfs.ext4:/lib/modules/7.3.1-onecloud

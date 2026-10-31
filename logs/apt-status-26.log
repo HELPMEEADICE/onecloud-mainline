@@ -1,0 +1,20 @@
+--- holds ---
+armbian-bsp-cli-onecloud-current
+linux-dtb-current-meson
+linux-image-current-meson
+--- versions ---
+apt=2.6.1
+armbian-config=26.8.0-trunk.426.1030.032129
+armbian-firmware=26.8.3
+linux-dtb-current-meson=26.08.0-trunk
+linux-image-current-meson=26.08.0-trunk
+openssh-server=1:9.2p1-2+deb12u10
+systemd=252.39-1~deb12u2
+u-boot-tools=2023.01+dfsg-2+deb12u3
+--- upgradable ---
+Listing...
+armbian-bsp-cli-onecloud-current/bookworm 26.8.3 armhf [upgradable from: 26.08.0-trunk]
+linux-dtb-current-meson/bookworm 26.8.3 armhf [upgradable from: 26.08.0-trunk]
+linux-image-current-meson/bookworm 26.8.3 armhf [upgradable from: 26.08.0-trunk]
+--- fs ---
+/dev/nvme0n1p2  238G  177G   61G  75% /

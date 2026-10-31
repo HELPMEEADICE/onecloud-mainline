@@ -1,0 +1,9 @@
+Using build/linux-7.3.1/.config as base
+Merging config/onecloud.fragment
+Value of CONFIG_NVMEM_MESON_MX_EFUSE is redefined by fragment config/onecloud.fragment:
+Previous value: CONFIG_NVMEM_MESON_MX_EFUSE=m
+New value: CONFIG_NVMEM_MESON_MX_EFUSE=y
+
+#
+# merged configuration written to /home/hedc/OneCloud/onecloud-mainline/build/linux-7.3.1/.config (needs make)
+#

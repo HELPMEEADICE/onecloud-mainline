@@ -28,6 +28,10 @@ DATA="$WORK/data"
 PAYLOAD="$DATA/usr/lib/onecloud-kernel/$KREL"
 mkdir -p "$DATA/usr/lib/modules" "$PAYLOAD"
 cp -a "$MODSRC" "$DATA/usr/lib/modules/"
+# Strip build-host symlinks added by modules_install; they are not usable on target.
+for link in build source; do
+    [ -L "$DATA/usr/lib/modules/$KREL/$link" ] && rm "$DATA/usr/lib/modules/$KREL/$link"
+done
 install -m 0644 "$ROOT/build/uImage" "$PAYLOAD/uImage"
 install -m 0644 "$ROOT/build/uInitrd" "$PAYLOAD/uInitrd"
 install -m 0644 "$KBUILD/arch/arm/boot/dts/amlogic/meson8b-onecloud.dtb" "$PAYLOAD/meson8b-onecloud.dtb"
@@ -52,7 +56,7 @@ Section: kernel
 Priority: optional
 Architecture: armhf
 Maintainer: OneCloud Mainline contributors <noreply@github.com>
-Depends: kmod, util-linux
+Depends: bash, coreutils, kmod, util-linux
 Homepage: https://github.com/HELPMEEADICE/onecloud-mainline
 Description: Linux $KVER kernel for Xunlei OneCloud S805
  Precompiled kernel modules and U-Boot legacy uImage/uInitrd/DTB.
@@ -85,6 +89,8 @@ packager = OneCloud Mainline contributors
 size = $(du -sb "$DATA" | cut -f1)
 arch = armv7h
 license = GPL2
+depend = bash
+depend = coreutils
 depend = kmod
 depend = util-linux
 EOF

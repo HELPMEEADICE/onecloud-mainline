@@ -20,14 +20,13 @@ TOOLCHAIN=arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf
 TOOLCHAIN_TAR="$ROOT/tools/$TOOLCHAIN.tar.xz"
 TOOLCHAIN_SHA256=3c65d820a6b8f677f8f6fbfc749fe00a4f16dde12341436c9df5b7092a47c0fb
 KERNEL_TAR="$ROOT/tools/linux-$KVER.tar.xz"
-KERNEL_SHA256=fa595aad93734f829c963c2a90ef7c3673224fd7fdae7b49406e397cde2de231
 SRC="$ROOT/src/linux-$KVER-upstream"
 BUILD=${BUILD_DIR:-"$ROOT/build/linux-$KVER-gcc15"}
 LOGFILE="$ROOT/logs/build-$KREL.log"
 export ARCH CROSS_COMPILE
 export PATH="$ROOT/tools/$TOOLCHAIN/bin:$ROOT/tools/localroot/usr/bin:$PATH"
 
-mkdir -p "$ROOT/logs" "$ROOT/build" "$ROOT/src" "$ROOT/config"
+mkdir -p "$ROOT/logs" "$ROOT/build" "$ROOT/src" "$ROOT/config" "$ROOT/tools" "$ROOT/tmp"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "=== OneCloud kernel build $(date -u +%FT%TZ) ==="
 echo "kernel=$KVER release=$KREL jobs=$JOBS"
@@ -51,7 +50,7 @@ fetch_verify() {
     mv "$dest.part" "$dest"
 }
 
-fetch_verify "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-$KVER.tar.xz" "$KERNEL_TAR" "$KERNEL_SHA256"
+"$ROOT/scripts/fetch-kernel.sh" "$KVER" "$KERNEL_TAR"
 fetch_verify "https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/$TOOLCHAIN.tar.xz" "$TOOLCHAIN_TAR" "$TOOLCHAIN_SHA256"
 
 if [ ! -x "$ROOT/tools/$TOOLCHAIN/bin/${CROSS_COMPILE}gcc" ]; then
@@ -148,7 +147,7 @@ if [ "${BUILD_UBOOT:-1}" = 1 ] && [ -d "$ROOT/src/u-boot-onecloud" ]; then
     "$ROOT/scripts/build-uboot.sh"
 fi
 
-if [ "${PACKAGE:-1}" = 1 ]; then
+if [ "${PACKAGE:-0}" = 1 ]; then
     "$ROOT/package.sh"
 fi
 echo "=== build complete $(date -u +%FT%TZ) ==="

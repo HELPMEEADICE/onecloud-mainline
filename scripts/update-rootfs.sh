@@ -9,8 +9,9 @@ SRC_IMG=${SRC_IMG:-$ROOT/baseline/part26-root.img}
 OUT_IMG=${OUT_IMG:-$ROOT/rootfs/onecloud-rootfs.ext4}
 ROOT_UUID=${ROOT_UUID:-8a03b678-0b46-4f41-bb09-3a2d154439bc}
 ROOTFS_BLOCKS=${ROOTFS_BLOCKS:-342016}
-PROOT=${PROOT:-$ROOT/tools/proot}
-QEMU_ARM=${QEMU_ARM:-$ROOT/tools/qemu-user-static/usr/bin/qemu-arm-static}
+PROOT=${PROOT:-$(command -v proot || true)}
+QEMU_ARM=${QEMU_ARM:-$(command -v qemu-arm-static || true)}
+mkdir -p "$ROOT/tmp" "$ROOT/rootfs"
 WORK=$(mktemp -d "$ROOT/tmp/rootfs-update.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT INT TERM
 
@@ -42,7 +43,7 @@ apt-get clean
 '
 
 # The kernel modules are supplied by build.sh/package.sh, not by this base image.
-rm -rf "$WORK/tree/lib/modules/7.3.1-onecloud"
+find "$WORK/tree/lib/modules" -maxdepth 1 -type d -name "*-onecloud" -exec rm -rf -- {} +
 
 echo "repack $OUT_IMG"
 rm -f "$OUT_IMG"

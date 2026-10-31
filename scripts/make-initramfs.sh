@@ -12,6 +12,7 @@ ROOT_UUID=${2:-8a03b678-0b46-4f41-bb09-3a2d154439bc}
 OUT=${3:-$ROOT_DIR/build/initramfs-$KREL.cpio.gz}
 BUSYBOX=${BUSYBOX:-$ROOT_DIR/tools/busybox/usr/bin/busybox}
 GEN_INIT_CPIO=${GEN_INIT_CPIO:-$ROOT_DIR/tools/gen_init_cpio}
+mkdir -p "$ROOT_DIR/tmp" "$(dirname "$OUT")"
 WORK=$(mktemp -d "$ROOT_DIR/tmp/initramfs.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT INT TERM
 

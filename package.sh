@@ -24,7 +24,7 @@ BASE_IMG_URL=https://github.com/upleung/armbian-onecloud/releases/download/v2026
 BASE_BURN_URL=https://github.com/upleung/armbian-onecloud/releases/download/v2026.08.03-2135/Armbian_26.08.0_Onecloud_bookworm_current_6.12.28_minimal.burn.img.xz
 
 export PATH="$ROOT/tools/localroot/usr/bin:$PATH"
-mkdir -p "$ROOT/logs" "$ROOT/build" "$ROOT/rootfs" "$ROOT/output"
+mkdir -p "$ROOT/logs" "$ROOT/build" "$ROOT/rootfs" "$ROOT/output" "$ROOT/tmp"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "=== OneCloud packaging $(date -u +%FT%TZ) ==="
 
@@ -80,8 +80,9 @@ fi
 echo "preparing rootfs"
 ROOTFS_IMAGE=${ROOTFS_IMAGE:-$ROOT/rootfs/onecloud-rootfs.ext4}
 if [ ! -f "$ROOTFS_IMAGE" ]; then
-    echo "WARNING: $ROOTFS_IMAGE missing; falling back to baseline rootfs without apt upgrade" >&2
-    ROOTFS_IMAGE="$PART_ROOT"
+    echo "preparing upgraded rootfs, with Mesa" >&2
+    [ "$ROOTFS_IMAGE" = "$ROOT/rootfs/onecloud-rootfs.ext4" ] || die "custom rootfs missing"
+    "$ROOT/scripts/update-rootfs.sh"
 fi
 rm -f "$ROOT/rootfs/onecloud-rootfs.work.ext4"
 cp --reflink=auto "$ROOTFS_IMAGE" "$ROOT/rootfs/onecloud-rootfs.work.ext4" 2>/dev/null || \
@@ -247,7 +248,7 @@ fi
       OneCloud-Linux-$KVER-armhf.img.xz OneCloud-Linux-$KVER-armhf.burn.img.xz \
       $( [ -n "$BURN_UBOOT" ] && echo OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img \
       OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz ) \
-      > SHA256SUMS 2>/dev/null || true
+      > SHA256SUMS
 )
 ls -lh "$ROOT/output"
 echo "=== packaging complete $(date -u +%FT%TZ) ==="

@@ -8,7 +8,7 @@
  	meson8m2-mxiii-plus.dtb
 --- /dev/null
 +++ b/arch/arm/boot/dts/amlogic/meson8b-onecloud.dts
-@@ -0,0 +1,407 @@
+@@ -0,0 +1,424 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Author: hzy <hzyitc@outlook.com>

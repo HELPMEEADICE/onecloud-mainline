@@ -464,11 +464,12 @@ Changes relative to the original series:
  &gpio {
  	gpio-line-names =
  		/*  0 */ "WIFI_SDIO_D0 PIN18 (GPIOX_0)",
-@@ -405,3 +451,22 @@
- 
- &usb1_phy {
+@@ -420,5 +466,17 @@
+ &ir_receiver {
  	status = "okay";
-+};
+ 	pinctrl-0 = <&ir_recv_pins>;
+ 	pinctrl-names = "default";
+ };
 +
 +&hdmi_tx {
 +	status = "okay";
@@ -480,12 +481,6 @@ Changes relative to the original series:
 +	hdmi_tx_tmds_out: endpoint {
 +		remote-endpoint = <&hdmi_connector_in>;
 +	};
-+};
-+
-+&ir_receiver {
-+	status = "okay";
-+	pinctrl-0 = <&ir_recv_pins>;
-+	pinctrl-names = "default";
 +};
 --- a/drivers/gpu/drm/meson/Kconfig
 +++ b/drivers/gpu/drm/meson/Kconfig

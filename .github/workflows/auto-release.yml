@@ -78,7 +78,7 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             bc binutils bison build-essential cpio curl device-tree-compiler dosfstools \
-            e2fsprogs fakeroot file flex git gnupg golang-go kmod libssl-dev \
+            dpkg-dev e2fsprogs fakeroot file flex git gnupg golang-go kmod libarchive-tools libssl-dev \
             mtools openssl patch perl proot python3 qemu-user-static rsync \
             u-boot-tools util-linux xz-utils zstd
       - name: Validate upstream Linux source and signing key
@@ -90,6 +90,11 @@ jobs:
       - name: Strict full-image verification gate
         run: |
           bash verify.sh | tee "logs/verify-$KVER.log"
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Build and verify Debian and pacman upgrade packages
+        run: |
+          bash scripts/build-upgrade-packages.sh
+          bash scripts/verify-upgrade-packages.sh | tee "logs/package-verification-$KVER.log"
           test "${PIPESTATUS[0]}" -eq 0
       - name: Release manifest and all asset checksums
         run: |
@@ -126,19 +131,23 @@ jobs:
             "output/OneCloud-Linux-$KVER-armhf.img.xz"
             "output/OneCloud-Linux-$KVER-armhf.burn.img.xz"
             "output/modules/modules-$KVER-onecloud.tar.xz"
+            "output/packages/onecloud-linux_${KVER}-1_armhf.deb"
+            "output/packages/onecloud-linux-${KVER}-1-armv7h.pkg.tar.zst"
             "output/kernel/meson8b-onecloud.dtb"
             "output/kernel/config-$KVER-onecloud"
             "output/SHA256SUMS"
             "output/BUILD-MANIFEST.txt"
             "logs/source-$KVER.sha256"
             "logs/verify-$KVER.log"
+            "logs/package-verification-$KVER.log"
           )
           for file in "${files[@]}"; do test -s "$file"; done
           cat > "$RUNNER_TEMP/release-notes.md" <<EOF
           Automated OneCloud Linux **$KVER** pre-release.
 
           This build includes the normal disk image and the Amlogic USB Burning Tool
-          image, Linux kernel modules and the downstream OneCloud patch stack.
+          image, Linux kernel modules, Debian armhf (.deb) and Arch Linux ARM
+          armv7h (.pkg.tar.zst) upgrade packages, and downstream patches.
 
           **Warning:** static verification passed, but CI did not test booting
           or flashing on physical OneCloud hardware. Do not assume that a new

@@ -539,8 +539,8 @@ eMMC 冷启动后复测：64K 62.65 MiB/s、128K 74.72 MiB/s、1M 74.85 MiB/s，
 | `OneCloud-Linux-7.3.1-armhf.img.xz` | 384,327,012 | `e38f6bfca27dc9433513ca0f3720013aae1818f808b2aab6b540d9b66f5a2292` |
 | `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img` | 1,246,950,508 | `4cdb172ef404401f638dfd21ec9c0585cc60b0c15b774121a944ca537d9d3155` |
 | `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz` | 384,479,904 | `3da845522d88b28dc0dee0a13d62b36b866a529ad3b34c50335fe07f148027f1` |
-| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img` | 1,246,877,768 | `d206c57386ca06a9ec08d928aba2608d3c285e6c0493e0a1cc00ad17f1f2a395` |
-| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img.xz` | 384,443,784 | `9fa728f6a131e236e13245863aec3c96481294fbea4150b175b42eb58b65989a` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img` | 1,246,877,756 | `697f92ede6aa0c6c744792119511e0c51737f8e7b7b2a720e8fb5367ee0acf75` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img.xz` | 384,431,616 | `83ae574f6eaf636f51f414d3c03e772a71167c080f4a58a5536141971c8787a1` |
 
 同时包含：
 

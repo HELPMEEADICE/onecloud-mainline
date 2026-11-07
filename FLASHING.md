@@ -42,7 +42,7 @@ sha256sum -c OneCloud-Linux-7.3.1-armhf.burn.img.sha256
 5. 主包保留的是 Armbian 基线中经过使用验证的 U-Boot。另有实验性的 `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img`：它保留基线的 SPL/DDR 初始化和 `UBOOT_COMP.USB`，只把 U-Boot proper payload 换成 GCC 15 构建版本；仍建议在串口和救砖条件下测试，不要把它当作首次刷写或量产镜像。
    其 SHA256：`54aeab76519b27dd44d949bd4494ff53559338906907ce4a86e828dea790ab63`。
    还有一个 `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img`：同样保留基线 SPL/DDR 和 `UBOOT_COMP.USB`，只把 U-Boot proper 替换为 mainline U-Boot v2026.10 的 Meson8b 移植（eMMC 启动路径）。该镜像尚未实机验证。
-   其 SHA256：`d206c57386ca06a9ec08d928aba2608d3c285e6c0493e0a1cc00ad17f1f2a395`（`.xz`：`9fa728f6a131e236e13245863aec3c96481294fbea4150b175b42eb58b65989a`）。
+   其 SHA256：`697f92ede6aa0c6c744792119511e0c51737f8e7b7b2a720e8fb5367ee0acf75`（`.xz`：`83ae574f6eaf636f51f414d3c03e772a71167c080f4a58a5536141971c8787a1`）。
 5. **不要勾选 “Erase flash”**，除非你明确要清空整块 eMMC 做救砖。普通升级不需要。
 
 ### 1.3 进入烧录模式

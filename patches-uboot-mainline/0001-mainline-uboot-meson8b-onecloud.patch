@@ -378,10 +378,10 @@ index a23336d7..fa4b410f 100644
  obj-$(CONFIG_MMC_OMAP_HS)		+= omap_hsmmc.o
 diff --git a/drivers/mmc/meson_mx_sdio.c b/drivers/mmc/meson_mx_sdio.c
 new file mode 100644
-index 00000000..536389b8
+index 00000000..4f4d18aa
 --- /dev/null
 +++ b/drivers/mmc/meson_mx_sdio.c
-@@ -0,0 +1,415 @@
+@@ -0,0 +1,417 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Amlogic Meson6/8/8b SDIO/MMC controller driver for U-Boot.
@@ -719,8 +719,10 @@ index 00000000..536389b8
 +		memcpy(data->dest, priv->bounce, len);
 +	}
 +
-+	if (ret)
++	if (ret) {
 +		meson_mx_sdio_reset(priv);
++		meson_mx_sdio_set_ios(dev);
++	}
 +
 +	return ret;
 +}

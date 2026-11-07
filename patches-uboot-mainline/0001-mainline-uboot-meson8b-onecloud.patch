@@ -1,0 +1,898 @@
+Mainline U-Boot v2026.10 support for the Xunlei OneCloud (Amlogic S805 /
+Meson8b).  This adds a 32-bit Meson8b platform, the OneCloud board, a minimal
+U-Boot device tree, a polled meson-mx-sdio MMC driver, the Meson6 timer, and
+the Amlogic vendor-SPL compatibility magic at offset 60 of the U-Boot proper
+image.  The port is built as U-Boot proper only and is loaded by the working
+vendor SPL/DDR firmware.
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 37d3b6fd..d7c73851 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -57,6 +57,8 @@ dtb-$(CONFIG_ARCH_S5P4418) += \
+ dtb-$(CONFIG_ARCH_MESON) += \
+ 	meson-a1-ad401.dtb
+ 
++dtb-$(CONFIG_MESON_M8B) += meson8b-onecloud.dtb
++
+ dtb-$(CONFIG_ARCH_TEGRA) += \
+ 	tegra20-acer-a500-picasso.dtb \
+ 	tegra20-asus-sl101.dtb \
+diff --git a/arch/arm/dts/meson8b-onecloud.dts b/arch/arm/dts/meson8b-onecloud.dts
+new file mode 100644
+index 00000000..ab1f2eb6
+--- /dev/null
++++ b/arch/arm/dts/meson8b-onecloud.dts
+@@ -0,0 +1,67 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Xunlei OneCloud (Amlogic S805 / Meson8b) U-Boot device tree.
++ *
++ * This tree is intentionally minimal: U-Boot proper only needs the console,
++ * the timer and the SDIO/MMC controller used to load the kernel.  It does not
++ * reuse the Linux meson8b.dtsi because that tree pulls in the full clock and
++ * pinctrl providers, which are not implemented in this U-Boot port.
++ */
++
++/dts-v1/;
++
++/ {
++	model = "Xunlei OneCloud";
++	compatible = "xunlei,onecloud", "amlogic,meson8b";
++	#address-cells = <1>;
++	#size-cells = <1>;
++
++	aliases {
++		serial0 = &uart_AO;
++		mmc0 = &emmc;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x40000000>;
++	};
++
++	xtal: xtal-clk {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <24000000>;
++		bootph-all;
++	};
++
++	uart_AO: serial@4c0 {
++		compatible = "amlogic,meson-uart";
++		reg = <0xc81004c0 0x18>;
++		clocks = <&xtal>;
++		clock-names = "baud";
++		status = "okay";
++		bootph-all;
++	};
++
++	emmc: mmc@8c20 {
++		compatible = "amlogic,meson-mx-sdio";
++		reg = <0xc1108c20 0x20>;
++		port = <2>;
++		bus-width = <4>;
++		status = "okay";
++	};
++
++	timer@9940 {
++		compatible = "amlogic,meson6-timer";
++		reg = <0xc1109940 0x18>;
++		bootph-all;
++	};
++
++	wdt@9900 {
++		compatible = "amlogic,meson6-wdt";
++		reg = <0xc1109900 0x8>;
++	};
++};
+diff --git a/arch/arm/lib/vectors.S b/arch/arm/lib/vectors.S
+index cf3f6c3e..0dccce4b 100644
+--- a/arch/arm/lib/vectors.S
++++ b/arch/arm/lib/vectors.S
+@@ -120,6 +120,18 @@ _not_used:		.word not_used
+ _irq:			.word irq
+ _fiq:			.word fiq
+ 
++#if defined(CONFIG_MESON_M8B)
++	/*
++	 * The Amlogic vendor SPL for Meson8b checks for 0x12345678 at
++	 * offset 60 (the first padding word after the exception vectors)
++	 * before jumping to U-Boot proper.  Keep that magic in the pad
++	 * slot so a mainline U-Boot can be loaded by the unmodified
++	 * vendor SPL.
++	 */
++	.globl _aml_uboot_magic
++_aml_uboot_magic:	.word 0x12345678
++#endif
++
+ 	.balignl 16,0xdeadbeef
+ #endif
+ 
+diff --git a/arch/arm/mach-meson/Kconfig b/arch/arm/mach-meson/Kconfig
+index c687ef82..b6379c70 100644
+--- a/arch/arm/mach-meson/Kconfig
++++ b/arch/arm/mach-meson/Kconfig
+@@ -26,6 +26,19 @@ choice
+ 	prompt "Platform select"
+ 	default MESON_GXBB
+ 
++config MESON_M8B
++	bool "M8B (S805)"
++	select CPU_V7A
++	select DM
++	select DM_SERIAL
++	select OF_CONTROL
++	select CLK
++	select TIMER
++	help
++	  Select this if your SoC is an S805 (Meson8b).  This is a 32-bit
++	  ARMv7 platform and normally boots as a U-Boot proper payload
++	  loaded by the Amlogic vendor SPL.
++
+ config MESON_GXBB
+ 	bool "GXBB"
+ 	select MESON_GX
+@@ -86,6 +99,7 @@ config SYS_VENDOR
+ config SYS_BOARD
+ 	string "Board name"
+ 	default "ad401" if MESON_A1
++	default "onecloud" if MESON_M8B
+ 	default "p200" if MESON_GXBB
+ 	default "p212" if MESON_GXL
+ 	default "q200" if MESON_GXM
+diff --git a/arch/arm/mach-meson/Makefile b/arch/arm/mach-meson/Makefile
+index 08a24d4b..ec7dfc3e 100644
+--- a/arch/arm/mach-meson/Makefile
++++ b/arch/arm/mach-meson/Makefile
+@@ -2,6 +2,7 @@
+ #
+ # Copyright (c) 2016 Beniamino Galvani <b.galvani@gmail.com>
+ 
++ifneq ($(CONFIG_MESON_M8B),y)
+ obj-y += board-common.o sm.o board-info.o capsule.o
+ obj-$(CONFIG_MESON_GX) += board-gx.o
+ ifeq ($(CONFIG_SPL_BUILD),y)
+@@ -17,3 +18,4 @@ endif
+ obj-$(CONFIG_MESON_AXG) += board-axg.o
+ obj-$(CONFIG_MESON_G12A) += board-g12a.o
+ obj-$(CONFIG_MESON_A1) += board-a1.o
++endif
+diff --git a/board/amlogic/onecloud/MAINTAINERS b/board/amlogic/onecloud/MAINTAINERS
+new file mode 100644
+index 00000000..194b2763
+--- /dev/null
++++ b/board/amlogic/onecloud/MAINTAINERS
+@@ -0,0 +1,7 @@
++Xunlei OneCloud (Amlogic S805 / Meson8b)
++
++M:	hzy <hzyitc@outlook.com>
++S:	Maintained
++F:	board/amlogic/onecloud/
++F:	configs/onecloud_defconfig
++F:	arch/arm/dts/meson8b-onecloud.dts
+diff --git a/board/amlogic/onecloud/Makefile b/board/amlogic/onecloud/Makefile
+new file mode 100644
+index 00000000..f169ce1d
+--- /dev/null
++++ b/board/amlogic/onecloud/Makefile
+@@ -0,0 +1,3 @@
++# SPDX-License-Identifier: GPL-2.0+
++
++obj-y += onecloud.o
+diff --git a/board/amlogic/onecloud/onecloud.c b/board/amlogic/onecloud/onecloud.c
+new file mode 100644
+index 00000000..230353c7
+--- /dev/null
++++ b/board/amlogic/onecloud/onecloud.c
+@@ -0,0 +1,95 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Xunlei OneCloud (Amlogic S805 / Meson8b) board support.
++ *
++ * This port is intended to run as U-Boot proper, loaded by the Amlogic
++ * vendor SPL (the SPL and DDR training code are kept from the working
++ * Armbian/vendor bootloader).
++ */
++
++#include <init.h>
++#include <linux/bitops.h>
++#include <asm/io.h>
++#include <asm/global_data.h>
++#include <linux/delay.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define MESON_CBUS_BASE			0xc1100000
++
++#define WDT_TC				(MESON_CBUS_BASE + 0x9900)
++#define WDT_RESET			(MESON_CBUS_BASE + 0x9904)
++#define HHI_GCLK_MPEG0			(MESON_CBUS_BASE + 0x4140)
++#define PERIPHS_PIN_MUX_2		(MESON_CBUS_BASE + 0x80b8)
++#define PERIPHS_PIN_MUX_6		(MESON_CBUS_BASE + 0x80c8)
++#define DDR_SIZE_IND_ADDR		0xd9000000
++
++int board_early_init_f(void)
++{
++	/* The vendor SPL arms the watchdog for 5 seconds. */
++	writel(0, WDT_TC);
++	writel(0, WDT_RESET);
++
++	/*
++	 * Enable the gate for the SDIO/MMC controller.  The controller is
++	 * used for the eMMC (port C) and the SD card (port B) on this board.
++	 */
++	setbits_le32(HHI_GCLK_MPEG0, BIT(17));
++
++	/*
++	 * Route the eMMC pads (BOOT_0..BOOT_5) to the SDIO port C function.
++	 * This matches the pinmux used by the vendor U-Boot and by the
++	 * meson-mx-sdio driver in Linux.
++	 */
++	clrbits_le32(PERIPHS_PIN_MUX_2, 0x1f << 22);
++	setbits_le32(PERIPHS_PIN_MUX_6, 0x3f << 26);
++
++	/* Route the SD card pads (CARD_0..CARD_5) to SDIO port B. */
++	setbits_le32(PERIPHS_PIN_MUX_2, 0x3f << 10);
++
++	return 0;
++}
++
++int dram_init(void)
++{
++	u32 ddr_size = readl(DDR_SIZE_IND_ADDR);
++
++	if (ddr_size < 128 || ddr_size > 2048)
++		ddr_size = 1024;
++
++	gd->ram_size = (phys_size_t)ddr_size << 20;
++	gd->ram_base = 0;
++
++	return 0;
++}
++
++int board_init(void)
++{
++	/* The machine ID is not used; the device tree is embedded/appended. */
++	gd->bd->bi_boot_params = 0;
++
++	return 0;
++}
++
++int misc_init_r(void)
++{
++	/* A MAC address can be provided by the environment or DHCP. */
++	return 0;
++}
++
++void reset_cpu(ulong addr)
++{
++	/* Trigger a watchdog reset; this also works when the CPU hangs. */
++	writel(0, WDT_RESET);
++	writel(10 | BIT(19) | (0xf << 24), WDT_TC);
++
++	while (1)
++		;
++}
++
++int print_cpuinfo(void)
++{
++	printf("CPU: Amlogic S805 (Meson8b), 4x Cortex-A5\n");
++
++	return 0;
++}
+diff --git a/cmd/meson/Makefile b/cmd/meson/Makefile
+index ee26c175..82d62506 100644
+--- a/cmd/meson/Makefile
++++ b/cmd/meson/Makefile
+@@ -2,4 +2,4 @@
+ #
+ # Copyright (c) 2022, SberDevices. All rights reserved.
+ 
+-obj-y += sm.o
++obj-$(CONFIG_MESON_SM) += sm.o
+diff --git a/configs/onecloud_defconfig b/configs/onecloud_defconfig
+new file mode 100644
+index 00000000..376ecd6b
+--- /dev/null
++++ b/configs/onecloud_defconfig
+@@ -0,0 +1,43 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MESON=y
++CONFIG_MESON_M8B=y
++CONFIG_TEXT_BASE=0x10000000
++CONFIG_SYS_MALLOC_LEN=0x02000000
++CONFIG_SYS_LOAD_ADDR=0x12000000
++CONFIG_HAS_CUSTOM_SYS_INIT_SP_ADDR=y
++CONFIG_CUSTOM_SYS_INIT_SP_ADDR=0x0ff00000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_ENV_SIZE=0x2000
++CONFIG_ENV_IS_NOWHERE=y
++CONFIG_DEFAULT_DEVICE_TREE="meson8b-onecloud"
++CONFIG_OF_CONTROL=y
++CONFIG_OF_SEPARATE=y
++CONFIG_OF_UPSTREAM=n
++CONFIG_DM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MESON_SERIAL=y
++CONFIG_CLK=y
++CONFIG_TIMER=y
++CONFIG_MESON6_TIMER=y
++CONFIG_DM_MMC=y
++CONFIG_MMC=y
++CONFIG_MMC_MESON_MX_SDIO=y
++CONFIG_BLK=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_CMD_BOOTM=y
++CONFIG_CMD_SOURCE=y
++CONFIG_CMD_PART=y
++CONFIG_DOS_PARTITION=y
++CONFIG_PARTITION_UUIDS=y
++CONFIG_BAUDRATE=115200
++CONFIG_SYS_BOOTM_LEN=0x02000000
++CONFIG_SYS_MAXARGS=32
++CONFIG_MISC_INIT_R=y
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_USE_BOOTCOMMAND=y
++CONFIG_BOOTCOMMAND="mmc dev 0; setenv bootdev 'mmc 0:1'; if fatload mmc 0:1 0x20800000 /boot.scr; then source 0x20800000; fi; echo 'boot.scr not found'"
++CONFIG_IDENT_STRING=" onecloud"
++CONFIG_SYS_PROMPT="onecloud> "
+diff --git a/drivers/mmc/Kconfig b/drivers/mmc/Kconfig
+index f9f7aa5c..ee115d30 100644
+--- a/drivers/mmc/Kconfig
++++ b/drivers/mmc/Kconfig
+@@ -334,6 +334,14 @@ config MMC_MESON_GX
+ 	help
+ 	  Support for EMMC host controller on Meson GX ARM SoCs platform (S905)
+ 
++config MMC_MESON_MX_SDIO
++	bool "Meson6/8/8b SDIO/MMC controller support"
++	depends on DM_MMC && ARCH_MESON
++	help
++	  Support for the SDIO/MMC host controller found on the 32-bit
++	  Amlogic Meson6, Meson8 and Meson8b SoCs.  It is used for the
++	  eMMC and SD card on the Xunlei OneCloud (S805).
++
+ config MMC_OWL
+ 	bool "Actions OWL Multimedia Card Interface support"
+ 	depends on ARCH_OWL
+diff --git a/drivers/mmc/Makefile b/drivers/mmc/Makefile
+index a23336d7..fa4b410f 100644
+--- a/drivers/mmc/Makefile
++++ b/drivers/mmc/Makefile
+@@ -38,6 +38,7 @@ obj-$(CONFIG_FSL_ESDHC_IMX) += fsl_esdhc_imx.o
+ obj-$(CONFIG_FTSDC010) += ftsdc010_mci.o
+ obj-$(CONFIG_GENERIC_ATMEL_MCI) += gen_atmel_mci.o
+ obj-$(CONFIG_MMC_MESON_GX) += meson_gx_mmc.o
++obj-$(CONFIG_MMC_MESON_MX_SDIO) += meson_mx_sdio.o
+ obj-$(CONFIG_MMC_SPI) += mmc_spi.o
+ obj-$(CONFIG_MVEBU_MMC) += mvebu_mmc.o
+ obj-$(CONFIG_MMC_OMAP_HS)		+= omap_hsmmc.o
+diff --git a/drivers/mmc/meson_mx_sdio.c b/drivers/mmc/meson_mx_sdio.c
+new file mode 100644
+index 00000000..536389b8
+--- /dev/null
++++ b/drivers/mmc/meson_mx_sdio.c
+@@ -0,0 +1,415 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Amlogic Meson6/8/8b SDIO/MMC controller driver for U-Boot.
++ *
++ * The register layout and command encoding are taken from the Linux
++ * meson-mx-sdio driver (Martin Blumenstingl) and from the vendor U-Boot
++ * aml_sd_mmc driver.  The controller is used for the eMMC (port C) and the
++ * SD card (port B) on the Xunlei OneCloud.
++ */
++
++#include <cpu_func.h>
++#include <dm.h>
++#include <linux/bitfield.h>
++#include <linux/bitops.h>
++#include <time.h>
++#include <linux/delay.h>
++#include <linux/errno.h>
++#include <memalign.h>
++#include <mmc.h>
++#include <part.h>
++#include <asm/cache.h>
++#include <asm/io.h>
++
++#define MESON_MX_SDIO_ARGU		0x00
++#define MESON_MX_SDIO_SEND		0x04
++#define MESON_MX_SDIO_SEND_CMD_INDEX		GENMASK(7, 0)
++#define MESON_MX_SDIO_SEND_RESP_BITS		GENMASK(15, 8)
++#define MESON_MX_SDIO_SEND_RESP_WITHOUT_CRC7	BIT(16)
++#define MESON_MX_SDIO_SEND_RESP_HAS_DATA	BIT(17)
++#define MESON_MX_SDIO_SEND_RESP_CRC7_FROM_8	BIT(18)
++#define MESON_MX_SDIO_SEND_CHECK_DAT0_BUSY	BIT(19)
++#define MESON_MX_SDIO_SEND_DATA			BIT(20)
++#define MESON_MX_SDIO_SEND_REPEAT_PACKAGE	GENMASK(31, 24)
++
++#define MESON_MX_SDIO_CONF		0x08
++#define MESON_MX_SDIO_CONF_CLK_DIV		GENMASK(9, 0)
++#define MESON_MX_SDIO_CONF_DISABLE_CRC		BIT(10)
++#define MESON_MX_SDIO_CONF_CMD_POSEDGE		BIT(11)
++#define MESON_MX_SDIO_CONF_ARGUMENT_BITS	GENMASK(17, 12)
++#define MESON_MX_SDIO_CONF_RESP_NEGEDGE		BIT(18)
++#define MESON_MX_SDIO_CONF_DATA_NEGEDGE		BIT(19)
++#define MESON_MX_SDIO_CONF_BUS_WIDTH		BIT(20)
++#define MESON_MX_SDIO_CONF_M_ENDIAN		GENMASK(22, 21)
++#define MESON_MX_SDIO_CONF_WRITE_NWR		GENMASK(28, 23)
++#define MESON_MX_SDIO_CONF_WRITE_CRC_OK		GENMASK(31, 29)
++
++#define MESON_MX_SDIO_IRQS		0x0c
++#define MESON_MX_SDIO_IRQS_CMD_BUSY		BIT(4)
++#define MESON_MX_SDIO_IRQS_RESP_CRC7_OK		BIT(5)
++#define MESON_MX_SDIO_IRQS_READ_CRC16_OK	BIT(6)
++#define MESON_MX_SDIO_IRQS_WRITE_CRC16_OK	BIT(7)
++#define MESON_MX_SDIO_IRQS_IF_INT		BIT(8)
++#define MESON_MX_SDIO_IRQS_CMD_INT		BIT(9)
++#define MESON_MX_SDIO_IRQS_TIMING_OUT		BIT(16)
++
++#define MESON_MX_SDIO_IRQC		0x10
++#define MESON_MX_SDIO_IRQC_CMD_INT_EN		BIT(4)
++#define MESON_MX_SDIO_IRQC_SOFT_RESET		BIT(15)
++
++#define MESON_MX_SDIO_MULT		0x14
++#define MESON_MX_SDIO_MULT_PORT_SEL		GENMASK(1, 0)
++#define MESON_MX_SDIO_MULT_WR_RD_OUT_INDEX	BIT(8)
++#define MESON_MX_SDIO_MULT_RESP_READ_INDEX	GENMASK(15, 12)
++
++#define MESON_MX_SDIO_ADDR		0x18
++#define MESON_MX_SDIO_EXT		0x1c
++#define MESON_MX_SDIO_EXT_DATA_RW_NUMBER	GENMASK(29, 16)
++
++#define MESON_MX_SDIO_RESPONSE_CRC16_BITS	(16 - 1)
++#define MESON_MX_SDIO_TIMEOUT_MS		1000
++
++/* Clock measurement registers (CBUS). */
++#define MESON_MSR_CLK_REG0		((void __iomem *)0xc110875c)
++#define MESON_MSR_CLK_REG2		((void __iomem *)0xc1108764)
++#define MESON_CLK81_MSR_MUX		7
++#define MESON_CLK81_DEFAULT_RATE	166666666
++
++struct meson_mx_sdio_plat {
++	struct mmc mmc;
++	struct mmc_config cfg;
++};
++
++struct meson_mx_sdio_priv {
++	u32 base;
++	u32 port;
++	u32 clock;
++	u32 clk81_rate;
++	u8 *bounce;
++};
++
++static inline u32 meson_sdio_read(struct meson_mx_sdio_priv *priv, u32 reg)
++{
++	return readl((void __iomem *)(priv->base + reg));
++}
++
++static inline void meson_sdio_write(struct meson_mx_sdio_priv *priv, u32 reg,
++				    u32 val)
++{
++	writel(val, (void __iomem *)(priv->base + reg));
++}
++
++static u32 meson_clk81_rate(void)
++{
++	u32 msr;
++	int i;
++
++	writel(0, MESON_MSR_CLK_REG0);
++	clrsetbits_le32(MESON_MSR_CLK_REG0, 0xffff, 63);
++	clrbits_le32(MESON_MSR_CLK_REG0, BIT(18) | BIT(17));
++	clrsetbits_le32(MESON_MSR_CLK_REG0, GENMASK(23, 20),
++			(MESON_CLK81_MSR_MUX << 20) | BIT(19) | BIT(16));
++
++	readl(MESON_MSR_CLK_REG0);
++	for (i = 0; i < 100000; i++) {
++		if (!(readl(MESON_MSR_CLK_REG0) & BIT(31)))
++			break;
++	}
++	clrbits_le32(MESON_MSR_CLK_REG0, BIT(16));
++
++	if (i == 100000)
++		return MESON_CLK81_DEFAULT_RATE;
++
++	msr = (readl(MESON_MSR_CLK_REG2) + 31) & GENMASK(19, 0);
++
++	if (!msr || (msr >> 6) > 500)
++		return MESON_CLK81_DEFAULT_RATE;
++
++	return (msr >> 6) * 1000000;
++}
++
++static void meson_mx_sdio_reset(struct meson_mx_sdio_priv *priv)
++{
++	meson_sdio_write(priv, MESON_MX_SDIO_IRQC,
++			 MESON_MX_SDIO_IRQC_SOFT_RESET);
++	udelay(2);
++	meson_sdio_write(priv, MESON_MX_SDIO_IRQC,
++			 MESON_MX_SDIO_IRQC_CMD_INT_EN);
++}
++
++static void meson_mx_sdio_set_clock(struct meson_mx_sdio_priv *priv,
++				    uint clock)
++{
++	u32 conf, div;
++
++	if (!clock)
++		return;
++
++	div = priv->clk81_rate / (2 * clock);
++	if (div > MESON_MX_SDIO_CONF_CLK_DIV)
++		div = MESON_MX_SDIO_CONF_CLK_DIV;
++
++	conf = meson_sdio_read(priv, MESON_MX_SDIO_CONF);
++	conf &= ~MESON_MX_SDIO_CONF_CLK_DIV;
++	conf |= div;
++
++	priv->clock = clock;
++	meson_sdio_write(priv, MESON_MX_SDIO_CONF, conf);
++}
++
++static int meson_mx_sdio_set_ios(struct udevice *dev)
++{
++	struct meson_mx_sdio_priv *priv = dev_get_priv(dev);
++	struct mmc *mmc = mmc_get_mmc_dev(dev);
++	u32 conf;
++
++	meson_mx_sdio_set_clock(priv, mmc->clock);
++
++	conf = meson_sdio_read(priv, MESON_MX_SDIO_CONF);
++	conf &= ~(MESON_MX_SDIO_CONF_BUS_WIDTH |
++		  MESON_MX_SDIO_CONF_ARGUMENT_BITS |
++		  MESON_MX_SDIO_CONF_M_ENDIAN |
++		  MESON_MX_SDIO_CONF_WRITE_NWR |
++		  MESON_MX_SDIO_CONF_WRITE_CRC_OK);
++
++	/* Match the vendor U-Boot controller setup. */
++	conf |= FIELD_PREP(MESON_MX_SDIO_CONF_WRITE_CRC_OK, 2) |
++		FIELD_PREP(MESON_MX_SDIO_CONF_WRITE_NWR, 2) |
++		FIELD_PREP(MESON_MX_SDIO_CONF_M_ENDIAN, 3) |
++		FIELD_PREP(MESON_MX_SDIO_CONF_ARGUMENT_BITS, 39);
++
++	if (mmc->bus_width == 4)
++		conf |= MESON_MX_SDIO_CONF_BUS_WIDTH;
++
++	meson_sdio_write(priv, MESON_MX_SDIO_CONF, conf);
++
++	clrsetbits_le32((void __iomem *)(priv->base + MESON_MX_SDIO_MULT),
++			MESON_MX_SDIO_MULT_PORT_SEL,
++			priv->port & MESON_MX_SDIO_MULT_PORT_SEL);
++
++	return 0;
++}
++
++static void meson_mx_sdio_read_response(struct meson_mx_sdio_priv *priv,
++					struct mmc_cmd *cmd)
++{
++	u32 resp[4];
++	int i;
++
++	if (cmd->resp_type & MMC_RSP_136) {
++		clrsetbits_le32((void __iomem *)(priv->base + MESON_MX_SDIO_MULT),
++				MESON_MX_SDIO_MULT_WR_RD_OUT_INDEX |
++				MESON_MX_SDIO_MULT_RESP_READ_INDEX,
++				MESON_MX_SDIO_MULT_WR_RD_OUT_INDEX);
++
++		for (i = 0; i < 4; i++)
++			resp[3 - i] = meson_sdio_read(priv, MESON_MX_SDIO_ARGU);
++
++		cmd->response[0] = (resp[0] << 8) | ((resp[1] >> 24) & 0xff);
++		cmd->response[1] = (resp[1] << 8) | ((resp[2] >> 24) & 0xff);
++		cmd->response[2] = (resp[2] << 8) | ((resp[3] >> 24) & 0xff);
++		cmd->response[3] = resp[3] << 8;
++	} else if (cmd->resp_type & MMC_RSP_PRESENT) {
++		cmd->response[0] = meson_sdio_read(priv, MESON_MX_SDIO_ARGU);
++	}
++}
++
++static int meson_mx_sdio_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
++				  struct mmc_data *data)
++{
++	struct meson_mx_sdio_priv *priv = dev_get_priv(dev);
++	struct mmc *mmc = mmc_get_mmc_dev(dev);
++	u32 send = 0, ext = 0, irqs;
++	ulong start;
++	uint len = 0;
++	int ret = 0;
++
++	if (data) {
++		if (!data->blocks || data->blocksize > 512 ||
++		    data->blocks > 256)
++			return -EINVAL;
++
++		len = data->blocks * data->blocksize;
++		if (!priv->bounce)
++			return -ENOMEM;
++
++		if (data->flags & MMC_DATA_WRITE) {
++			memcpy(priv->bounce, data->src, len);
++			flush_dcache_range((ulong)priv->bounce,
++					   (ulong)priv->bounce + len);
++		} else {
++			invalidate_dcache_range((ulong)priv->bounce,
++						(ulong)priv->bounce + len);
++		}
++
++		send |= FIELD_PREP(MESON_MX_SDIO_SEND_REPEAT_PACKAGE,
++				   data->blocks - 1);
++
++		ext = data->blocksize * 8;
++		if (mmc->bus_width == 4)
++			ext += MESON_MX_SDIO_RESPONSE_CRC16_BITS * 4;
++		else
++			ext += MESON_MX_SDIO_RESPONSE_CRC16_BITS;
++		ext = FIELD_PREP(MESON_MX_SDIO_EXT_DATA_RW_NUMBER, ext);
++
++		if (data->flags & MMC_DATA_WRITE)
++			send |= MESON_MX_SDIO_SEND_DATA;
++		else
++			send |= MESON_MX_SDIO_SEND_RESP_HAS_DATA;
++	}
++
++	switch (cmd->resp_type & ~MMC_RSP_BUSY) {
++	case MMC_RSP_R1:
++	case MMC_RSP_R3:
++		send |= FIELD_PREP(MESON_MX_SDIO_SEND_RESP_BITS, 45);
++		break;
++	case MMC_RSP_R2:
++		send |= FIELD_PREP(MESON_MX_SDIO_SEND_RESP_BITS, 133);
++		send |= MESON_MX_SDIO_SEND_RESP_CRC7_FROM_8;
++		break;
++	default:
++		break;
++	}
++
++	if (!(cmd->resp_type & MMC_RSP_CRC))
++		send |= MESON_MX_SDIO_SEND_RESP_WITHOUT_CRC7;
++
++	if (cmd->resp_type & MMC_RSP_BUSY)
++		send |= MESON_MX_SDIO_SEND_CHECK_DAT0_BUSY;
++
++	send |= FIELD_PREP(MESON_MX_SDIO_SEND_CMD_INDEX, 0x40 | cmd->cmdidx);
++
++	clrsetbits_le32((void __iomem *)(priv->base + MESON_MX_SDIO_MULT),
++			MESON_MX_SDIO_MULT_PORT_SEL,
++			priv->port & MESON_MX_SDIO_MULT_PORT_SEL);
++
++	setbits_le32((void __iomem *)(priv->base + MESON_MX_SDIO_IRQC),
++		     MESON_MX_SDIO_IRQC_CMD_INT_EN);
++
++	/* Clear any stale status bits. */
++	meson_sdio_write(priv, MESON_MX_SDIO_IRQS,
++			 MESON_MX_SDIO_IRQS_RESP_CRC7_OK |
++			 MESON_MX_SDIO_IRQS_READ_CRC16_OK |
++			 MESON_MX_SDIO_IRQS_WRITE_CRC16_OK |
++			 MESON_MX_SDIO_IRQS_IF_INT |
++			 MESON_MX_SDIO_IRQS_CMD_INT |
++			 MESON_MX_SDIO_IRQS_TIMING_OUT);
++
++	meson_sdio_write(priv, MESON_MX_SDIO_ARGU, cmd->cmdarg);
++	if (data) {
++		meson_sdio_write(priv, MESON_MX_SDIO_EXT, ext);
++		meson_sdio_write(priv, MESON_MX_SDIO_ADDR,
++				 (u32)(uintptr_t)priv->bounce);
++	} else {
++		meson_sdio_write(priv, MESON_MX_SDIO_EXT, 0);
++	}
++
++	meson_sdio_write(priv, MESON_MX_SDIO_SEND, send);
++
++	start = get_timer(0);
++	do {
++		irqs = meson_sdio_read(priv, MESON_MX_SDIO_IRQS);
++		if (irqs & MESON_MX_SDIO_IRQS_CMD_INT)
++			break;
++	} while (get_timer(start) < MESON_MX_SDIO_TIMEOUT_MS);
++
++	if (!(irqs & MESON_MX_SDIO_IRQS_CMD_INT)) {
++		ret = -ETIMEDOUT;
++	} else if (irqs & MESON_MX_SDIO_IRQS_TIMING_OUT) {
++		ret = -ETIMEDOUT;
++	} else if (data) {
++		if (!(irqs & (MESON_MX_SDIO_IRQS_READ_CRC16_OK |
++			      MESON_MX_SDIO_IRQS_WRITE_CRC16_OK)))
++			ret = -EILSEQ;
++	} else if (!(irqs & MESON_MX_SDIO_IRQS_RESP_CRC7_OK) &&
++		   !(send & MESON_MX_SDIO_SEND_RESP_WITHOUT_CRC7)) {
++		ret = -EILSEQ;
++	}
++
++	meson_mx_sdio_read_response(priv, cmd);
++	meson_sdio_write(priv, MESON_MX_SDIO_IRQS, irqs);
++
++	if (data && (data->flags & MMC_DATA_READ)) {
++		invalidate_dcache_range((ulong)priv->bounce,
++					(ulong)priv->bounce + len);
++		memcpy(data->dest, priv->bounce, len);
++	}
++
++	if (ret)
++		meson_mx_sdio_reset(priv);
++
++	return ret;
++}
++
++static int meson_mx_sdio_bind(struct udevice *dev)
++{
++	struct meson_mx_sdio_plat *plat = dev_get_plat(dev);
++
++	return mmc_bind(dev, &plat->mmc, &plat->cfg);
++}
++
++static int meson_mx_sdio_probe(struct udevice *dev)
++{
++	struct meson_mx_sdio_plat *plat = dev_get_plat(dev);
++	struct meson_mx_sdio_priv *priv = dev_get_priv(dev);
++	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
++	struct mmc *mmc = &plat->mmc;
++	struct mmc_config *cfg = &plat->cfg;
++	fdt_addr_t addr;
++	u32 port;
++	int ret;
++
++	addr = dev_read_addr(dev);
++	if (addr == FDT_ADDR_T_NONE)
++		return -EINVAL;
++
++	priv->base = (u32)addr;
++	ret = dev_read_u32(dev, "port", &port);
++	if (ret)
++		port = 2;
++	priv->port = port & MESON_MX_SDIO_MULT_PORT_SEL;
++	priv->clk81_rate = meson_clk81_rate();
++	priv->bounce = memalign(ARCH_DMA_MINALIGN, 256 * 512);
++	if (!priv->bounce)
++		return -ENOMEM;
++
++	cfg->name = dev->name;
++	cfg->voltages = MMC_VDD_33_34;
++	cfg->host_caps = MMC_MODE_4BIT | MMC_MODE_HS;
++	cfg->f_min = 200000;
++	cfg->f_max = 50000000;
++	cfg->b_max = 256;
++	cfg->part_type = PART_TYPE_DOS;
++
++	mmc->priv = priv;
++	upriv->mmc = mmc;
++
++	meson_mx_sdio_reset(priv);
++
++	mmc->clock = cfg->f_min;
++	mmc->bus_width = 1;
++	meson_mx_sdio_set_ios(dev);
++
++	return 0;
++}
++
++static const struct dm_mmc_ops meson_mx_sdio_ops = {
++	.send_cmd = meson_mx_sdio_send_cmd,
++	.set_ios = meson_mx_sdio_set_ios,
++};
++
++static const struct udevice_id meson_mx_sdio_ids[] = {
++	{ .compatible = "amlogic,meson-mx-sdio" },
++	{ /* sentinel */ }
++};
++
++U_BOOT_DRIVER(meson_mx_sdio) = {
++	.name = "meson_mx_sdio",
++	.id = UCLASS_MMC,
++	.of_match = meson_mx_sdio_ids,
++	.ops = &meson_mx_sdio_ops,
++	.bind = meson_mx_sdio_bind,
++	.probe = meson_mx_sdio_probe,
++	.priv_auto = sizeof(struct meson_mx_sdio_priv),
++	.plat_auto = sizeof(struct meson_mx_sdio_plat),
++};
+diff --git a/drivers/timer/Kconfig b/drivers/timer/Kconfig
+index 500a2563..4c597861 100644
+--- a/drivers/timer/Kconfig
++++ b/drivers/timer/Kconfig
+@@ -317,6 +317,13 @@ config MCHP_PIT64B_TIMER
+ 	  Select this to enable support for Microchip 64-bit periodic
+ 	  interval timer.
+ 
++config MESON6_TIMER
++	bool "Amlogic Meson6/8/8b timer support"
++	depends on TIMER && ARCH_MESON
++	help
++	  Select this to enable support for the 1 us free-running timer
++	  found on the 32-bit Amlogic Meson6, Meson8 and Meson8b SoCs.
++
+ config IMX_GPT_TIMER
+ 	bool "NXP i.MX GPT timer support"
+ 	depends on TIMER
+diff --git a/drivers/timer/Makefile b/drivers/timer/Makefile
+index d8b3f2b6..eae179a9 100644
+--- a/drivers/timer/Makefile
++++ b/drivers/timer/Makefile
+@@ -33,6 +33,7 @@ obj-$(CONFIG_TEGRA_TIMER)	+= tegra-timer.o
+ obj-$(CONFIG_X86_TSC_TIMER)	+= tsc_timer.o
+ obj-$(CONFIG_MTK_TIMER)		+= mtk_timer.o
+ obj-$(CONFIG_MCHP_PIT64B_TIMER)	+= mchp-pit64b-timer.o
++obj-$(CONFIG_MESON6_TIMER)	+= meson6_timer.o
+ obj-$(CONFIG_IMX_GPT_TIMER)	+= imx-gpt-timer.o
+ obj-$(CONFIG_XILINX_TIMER)	+= xilinx-timer.o
+ obj-$(CONFIG_STARFIVE_TIMER)	+= starfive-timer.o
+diff --git a/drivers/timer/meson6_timer.c b/drivers/timer/meson6_timer.c
+new file mode 100644
+index 00000000..0d22c11c
+--- /dev/null
++++ b/drivers/timer/meson6_timer.c
+@@ -0,0 +1,63 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Amlogic Meson6/8/8b timer (timer E, 1 us free-running counter).
++ */
++
++#include <dm.h>
++#include <linux/bitops.h>
++#include <timer.h>
++#include <asm/io.h>
++
++#define MESON_TIMER_MUX			0x00
++#define MESON_TIMER_E			0x14
++#define MESON_TIMER_MUX_E_CLK_MASK	GENMASK(10, 8)
++#define MESON_TIMER_MUX_E_CLK_1US	1
++
++struct meson6_timer_priv {
++	void __iomem *base;
++};
++
++static u64 meson6_timer_get_count(struct udevice *dev)
++{
++	struct meson6_timer_priv *priv = dev_get_priv(dev);
++
++	return timer_conv_64(readl(priv->base + MESON_TIMER_E));
++}
++
++static int meson6_timer_probe(struct udevice *dev)
++{
++	struct timer_dev_priv *uc_priv = dev_get_uclass_priv(dev);
++	struct meson6_timer_priv *priv = dev_get_priv(dev);
++	u32 val;
++
++	priv->base = (void __iomem *)dev_read_addr(dev);
++	if (!priv->base || priv->base == (void __iomem *)FDT_ADDR_T_NONE)
++		return -EINVAL;
++
++	val = readl(priv->base + MESON_TIMER_MUX);
++	val &= ~MESON_TIMER_MUX_E_CLK_MASK;
++	val |= MESON_TIMER_MUX_E_CLK_1US << 8;
++	writel(val, priv->base + MESON_TIMER_MUX);
++
++	uc_priv->clock_rate = 1000000;
++
++	return 0;
++}
++
++static const struct timer_ops meson6_timer_ops = {
++	.get_count = meson6_timer_get_count,
++};
++
++static const struct udevice_id meson6_timer_ids[] = {
++	{ .compatible = "amlogic,meson6-timer" },
++	{ /* sentinel */ }
++};
++
++U_BOOT_DRIVER(meson6_timer) = {
++	.name = "meson6_timer",
++	.id = UCLASS_TIMER,
++	.of_match = meson6_timer_ids,
++	.probe = meson6_timer_probe,
++	.ops = &meson6_timer_ops,
++	.priv_auto = sizeof(struct meson6_timer_priv),
++};

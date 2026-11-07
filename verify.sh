@@ -210,6 +210,19 @@ else
     bad "patches do not apply"
 fi
 
+section "mainline U-Boot variant (optional)"
+MAINLINE_BURN="$OUT/OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img"
+if [ -s "$MAINLINE_BURN" ] && [ -x "$ROOT/scripts/verify-uboot-mainline.sh" ]; then
+    mkdir -p "$ROOT/logs"
+    if "$ROOT/scripts/verify-uboot-mainline.sh" >"$ROOT/logs/verify-uboot-mainline.log" 2>&1; then
+        ok "mainline U-Boot image"
+    else
+        bad "mainline U-Boot image (see logs/verify-uboot-mainline.log)"
+    fi
+else
+    echo "  SKIP mainline U-Boot image not built"
+fi
+
 printf '\n== result: %d passed, %d failed ==\n' "$PASS" "$FAIL"
 echo "NOTE: this is static verification only; no OneCloud hardware was used."
 [ "$FAIL" -eq 0 ]

@@ -117,6 +117,59 @@ DDR 初始化代码对编译器和时序非常敏感，上游 CI 本身使用的
 对应文件：`OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img`。即使这个实验镜像
 仍失败，主镜像和 USB 救砖路径也不受影响。没有串口和救砖手段时不要刷它。
 
+### 3.3 U-Boot proper 主线移植（实验）
+
+S805/Meson8b 从未进入 mainline U-Boot，`hzyitc/u-boot-onecloud` 的
+`onecloud` 分支也停在 2022-10-28。为了验证“把 U-Boot 更新到最新版本”的
+可行性，本工程把 mainline U-Boot `v2026.10` 移植为 **U-Boot proper
+payload**，保留已经实机验证过的 vendor SPL/DDR 初始化：
+
+- SPL/DDR：`4.bootloader.PARTITION` 前 32 KiB 逐字节保持基线；
+- U-Boot proper：`arch/arm/dts/meson8b-onecloud.dts`、`board/amlogic/onecloud/`、
+  `configs/onecloud_defconfig`；
+- 新增 `MESON_M8B` 32 位平台（ARMv7 Cortex-A5），不依赖 `MESON64_COMMON`；
+- 新增 `drivers/mmc/meson_mx_sdio.c`：轮询式 `meson-mx-sdio` 驱动，
+  使用 SDIO port C 访问 eMMC，4-bit、最大 50 MHz，单 DMA bounce buffer
+  （128 KiB），`b_max=256`；
+- 新增 `drivers/timer/meson6_timer.c`：timer E，1 µs 自由运行计数器；
+- 串口复用现有 `MESON_SERIAL`，U-Boot DTS 中给 UART_AO 配 24 MHz
+  `fixed-clock`；
+- 在 `arch/arm/lib/vectors.S` 的异常向量表 padding word（偏移 60）写入
+  `0x12345678`，满足 vendor SPL 的 `check_sum()`；因此 **SPL 不需要任何
+  二进制补丁**；
+- `cmd/meson/Makefile` 仅在 `CONFIG_MESON_SM` 时编译 secure-monitor 命令，
+  避免 32 位平台链接失败。
+
+关键配置：
+
+- `CONFIG_TEXT_BASE=0x10000000`（vendor SPL 解压目标）
+- `CONFIG_CUSTOM_SYS_INIT_SP_ADDR=0x0ff00000`
+- `CONFIG_SYS_BOOTM_LEN=0x02000000`（内核 uImage 为 12.75 MiB，超过默认 8 MiB）
+- `CONFIG_ENV_IS_NOWHERE=y`
+- `bootcmd`：`mmc dev 0; setenv bootdev 'mmc 0:1'; fatload ... /boot.scr; source`
+
+构建流程：
+
+```bash
+./scripts/build-uboot-mainline.sh
+UBOOT_MAINLINE_VARIANT=1 ./package.sh
+./scripts/verify-uboot-mainline.sh
+```
+
+产物在 `output/uboot-mainline/`，实验线刷包为
+`OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img`。静态校验覆盖：
+
+- 前 32 KiB SPL/DDR 与基线一致（只允许 payload 长度字段变化）；
+- payload 解压后与 `u-boot-dtb.bin` 一致，偏移 60 为 `0x12345678`；
+- `1.UBOOT_COMP.USB`、`0.DDR.USB`、resource、boot/rootfs 分区保持不变；
+- `AmlImg` 重新打包逐字节一致；
+- U-Boot `.config` 包含 `MESON_M8B`、`MMC_MESON_MX_SDIO`、`MESON6_TIMER`、
+  `MESON_SERIAL` 和 32 MiB `SYS_BOOTM_LEN`。
+
+限制：只移植了 eMMC 启动所需的 U-Boot proper 驱动；SD 卡、网口、USB、
+HDMI、LED/按键尚未移植。**尚未在实机验证**，因此主镜像仍保留 baseline
+bootloader，实验镜像只用于串口/USB 救砖手段齐全时的测试。
+
 ## 4. 设备树移植
 
 初始设备树来自 Armbian `armbian-build` 仓库 6.12 归档补丁：
@@ -266,6 +319,8 @@ CONFIG_FAT_DEFAULT_IOCHARSET="utf8"
 启动链完全沿用基线：
 
 - U-Boot：hzyitc u-boot-onecloud（Amlogic 2011.03 分支），保留原 `bootloader.PARTITION`。
+  （实验性 `-uboot-mainline.burn.img` 使用同样的 SPL/DDR，但把 U-Boot proper
+  换成 mainline v2026.10；见第 3.3 节。）
 - `boot.scr`：基线 U-Boot script，未修改；加载地址：
   - `uImage` → `0x20800000`
   - `uInitrd` → `0x22000000`
@@ -484,14 +539,17 @@ eMMC 冷启动后复测：64K 62.65 MiB/s、128K 74.72 MiB/s、1M 74.85 MiB/s，
 | `OneCloud-Linux-7.3.1-armhf.img.xz` | 384,327,012 | `e38f6bfca27dc9433513ca0f3720013aae1818f808b2aab6b540d9b66f5a2292` |
 | `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img` | 1,246,950,508 | `4cdb172ef404401f638dfd21ec9c0585cc60b0c15b774121a944ca537d9d3155` |
 | `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img.xz` | 384,479,904 | `3da845522d88b28dc0dee0a13d62b36b866a529ad3b34c50335fe07f148027f1` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img` | 1,246,877,768 | `d206c57386ca06a9ec08d928aba2608d3c285e6c0493e0a1cc00ad17f1f2a395` |
+| `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img.xz` | 384,443,784 | `9fa728f6a131e236e13245863aec3c96481294fbea4150b175b42eb58b65989a` |
 
 同时包含：
 
-- `SHA256SUMS` 及六个单文件 `.sha256`。
+- `SHA256SUMS` 及八个单文件 `.sha256`。
 - `kernel/zImage`、`kernel/uImage`、`kernel/uInitrd`、`kernel/meson8b-onecloud.dtb`、`kernel/config-7.3.1-onecloud`、`kernel/System.map-7.3.1-onecloud`。
 - `modules/modules-7.3.1-onecloud.tar.xz`（完整 1078 模块）。
 - `patches/0001-ARM-dts-meson8b-add-Xunlei-OneCloud.patch`、`patches/0002-dt-bindings-vendor-prefixes-add-xunlei.patch`。
 - `patches-uboot/0001-u-boot-gcc15-build-compat.patch` 及 `uboot/` 下的 U-Boot 15.2 构建产物。
+- `patches-uboot-mainline/0001-mainline-uboot-meson8b-onecloud.patch` 及 `uboot-mainline/` 下的 mainline U-Boot v2026.10 构建产物（`u-boot-dtb.bin`、`u-boot-comp.bin`、`u-boot-hybrid-mainline.bin`、`System.map`、最终 `.config`）。
 - 实验性 U-Boot 线刷包及 `.xz`、`.sha256`。
 - `build.sh`、`package.sh`、`verify.sh` 及 `scripts/` 辅助脚本。
 - `BUILD_REPORT.md`、`FLASHING.md`。

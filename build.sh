@@ -165,6 +165,10 @@ if [ "${BUILD_UBOOT:-1}" = 1 ] && [ -d "$ROOT/src/u-boot-onecloud" ]; then
     "$ROOT/scripts/build-uboot.sh"
 fi
 
+if [ "${BUILD_UBOOT_MAINLINE:-0}" = 1 ]; then
+    "$ROOT/scripts/build-uboot-mainline.sh"
+fi
+
 if [ "${PACKAGE:-0}" = 1 ]; then
     "$ROOT/package.sh"
 fi

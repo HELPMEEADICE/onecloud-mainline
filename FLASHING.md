@@ -41,6 +41,8 @@ sha256sum -c OneCloud-Linux-7.3.1-armhf.burn.img.sha256
 4. 保持工具的默认擦除选项。该线刷包的 `aml_sdc_burn.ini` 中 `erase_bootloader = 1`，会重新写入包内保留的 U-Boot；这是预期行为。
 5. 主包保留的是 Armbian 基线中经过使用验证的 U-Boot。另有实验性的 `OneCloud-Linux-7.3.1-armhf-uboot-gcc15.burn.img`：它保留基线的 SPL/DDR 初始化和 `UBOOT_COMP.USB`，只把 U-Boot proper payload 换成 GCC 15 构建版本；仍建议在串口和救砖条件下测试，不要把它当作首次刷写或量产镜像。
    其 SHA256：`54aeab76519b27dd44d949bd4494ff53559338906907ce4a86e828dea790ab63`。
+   还有一个 `OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img`：同样保留基线 SPL/DDR 和 `UBOOT_COMP.USB`，只把 U-Boot proper 替换为 mainline U-Boot v2026.10 的 Meson8b 移植（eMMC 启动路径）。该镜像尚未实机验证。
+   其 SHA256：`d206c57386ca06a9ec08d928aba2608d3c285e6c0493e0a1cc00ad17f1f2a395`（`.xz`：`9fa728f6a131e236e13245863aec3c96481294fbea4150b175b42eb58b65989a`）。
 5. **不要勾选 “Erase flash”**，除非你明确要清空整块 eMMC 做救砖。普通升级不需要。
 
 ### 1.3 进入烧录模式
@@ -216,5 +218,6 @@ fatload ${bootdev} 0x20800000 boot.scr && autoscr 0x20800000
 - IR、WiFi 未配置。
 - 如果实机只有 CPU0 在线，或 eFuse/MAC 读取异常，参考 `BUILD_REPORT.md` 第 10 节，评估 TrustZone 补丁。
 - 主线的 U-Boot 重建产物已单独放在 `output/uboot/`；主镜像仍使用 Armbian 26.08.0 基线的已知可工作 U-Boot。实验性 `-uboot-gcc15` 镜像保留基线 SPL/DDR 和 `UBOOT_COMP.USB`，只替换 U-Boot proper payload，仍需要串口和救砖手段。
+- mainline U-Boot v2026.10 的移植产物在 `output/uboot-mainline/`，对应 `-uboot-mainline` 实验线刷包；它同样保留基线 SPL/DDR，只替换 U-Boot proper，尚未实机验证。
 - 线刷包基于 Armbian 26.08.0 的 U-Boot 和分区布局；不要把它与其它板型的 Amlogic 烧录包混用。
 - eMMC 为 8 GB 级别；本包解压后布局约 1.6 GiB，远小于容量，但不要根据 `.xz` 压缩文件大小判断闪存需求。

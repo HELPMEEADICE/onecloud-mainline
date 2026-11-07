@@ -214,12 +214,43 @@ if [ "$UBOOT_VARIANT" = 1 ] && [ -s "$ROOT/output/uboot/u-boot-comp.bin" ]; then
     fi
 fi
 
+# ---- optional mainline U-Boot payload variant ------------------------------
+# mainline U-Boot has no Meson8b SPL/DDR support.  Keep the known-good vendor
+# SPL/DDR firmware and replace only the U-Boot proper payload with the
+# mainline v2026.10 port (see patches-uboot-mainline/).  The vendor SPL's
+# 0x12345678 magic is placed in U-Boot's exception-vector padding word, so no
+# SPL binary patching is needed.
+UBOOT_MAINLINE_VARIANT=${UBOOT_MAINLINE_VARIANT:-1}
+BURN_UBOOT_MAINLINE=""
+if [ "$UBOOT_MAINLINE_VARIANT" = 1 ] && \
+   [ -s "$ROOT/output/uboot-mainline/u-boot-hybrid-mainline.bin" ]; then
+    echo "building mainline U-Boot payload variant"
+    UBOOT_MAINLINE_DIR="$ROOT/build/burn-package-uboot-mainline"
+    rm -rf "$UBOOT_MAINLINE_DIR"
+    cp -a "$BURN_DIR" "$UBOOT_MAINLINE_DIR"
+    cp -f "$BURN_UNPACKED/1.UBOOT_COMP.USB" \
+        "$UBOOT_MAINLINE_DIR/1.UBOOT_COMP.USB"
+    cp -f "$ROOT/output/uboot-mainline/u-boot-hybrid-mainline.bin" \
+        "$UBOOT_MAINLINE_DIR/4.bootloader.PARTITION"
+    printf 'sha1sum %s' \
+        "$(sha1sum "$UBOOT_MAINLINE_DIR/4.bootloader.PARTITION" | cut -d' ' -f1)" \
+        >"$UBOOT_MAINLINE_DIR/5.bootloader.VERIFY"
+    BURN_UBOOT_MAINLINE="$ROOT/build/OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img"
+    rm -f "$BURN_UBOOT_MAINLINE"
+    "$ROOT/tools/AmlImg" pack "$BURN_UBOOT_MAINLINE" "$UBOOT_MAINLINE_DIR"
+elif [ "$UBOOT_MAINLINE_VARIANT" = 1 ]; then
+    echo "note: mainline U-Boot variant not built" \
+         "(run scripts/build-uboot-mainline.sh)" >&2
+fi
+
 # ---- publish ---------------------------------------------------------------
 echo "publishing output"
 cp -f "$NORMAL" "$ROOT/output/OneCloud-Linux-$KVER-armhf.img"
 cp -f "$BURN" "$ROOT/output/OneCloud-Linux-$KVER-armhf.burn.img"
 [ -n "$BURN_UBOOT" ] && \
     cp -f "$BURN_UBOOT" "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img"
+[ -n "$BURN_UBOOT_MAINLINE" ] && \
+    cp -f "$BURN_UBOOT_MAINLINE" "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img"
 mkdir -p "$ROOT/output/kernel" "$ROOT/output/modules" "$ROOT/output/patches"
 cp -f "$ROOT/build/uImage" "$ROOT/build/uInitrd" "$ROOT/output/kernel/"
 cp -f "$KERNEL_BUILD/arch/arm/boot/zImage" "$ROOT/output/kernel/"
@@ -235,13 +266,17 @@ if [ "${COMPRESS:-1}" = 1 ]; then
         "$ROOT/output/OneCloud-Linux-$KVER-armhf.burn.img"
     [ -n "$BURN_UBOOT" ] && xz -T0 "-${XZ_LEVEL:-6}" -k -f \
         "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img"
+    [ -n "$BURN_UBOOT_MAINLINE" ] && xz -T0 "-${XZ_LEVEL:-6}" -k -f \
+        "$ROOT/output/OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img"
 fi
 
 ( cd "$ROOT/output"
   for f in OneCloud-Linux-$KVER-armhf.img OneCloud-Linux-$KVER-armhf.burn.img \
            OneCloud-Linux-$KVER-armhf.img.xz OneCloud-Linux-$KVER-armhf.burn.img.xz \
            OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img \
-           OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz; do
+           OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz \
+           OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img \
+           OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img.xz; do
       [ -f "$f" ] && sha256sum "$f" > "$f.sha256"
   done
   sha256sum OneCloud-Linux-$KVER-armhf.img OneCloud-Linux-$KVER-armhf.burn.img \
@@ -249,6 +284,9 @@ fi
       $( [ -n "$BURN_UBOOT" ] && echo OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img \
       OneCloud-Linux-$KVER-armhf-uboot-gcc15.burn.img.xz ) \
       > SHA256SUMS
+  [ -n "$BURN_UBOOT_MAINLINE" ] && sha256sum \
+      OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img \
+      OneCloud-Linux-$KVER-armhf-uboot-mainline.burn.img.xz >> SHA256SUMS
 )
 ls -lh "$ROOT/output"
 echo "=== packaging complete $(date -u +%FT%TZ) ==="

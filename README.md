@@ -38,6 +38,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 │   └── rootfs/                   # 根文件系统网络与模块配置
 ├── patches/              # 内核补丁（OneCloud 设备树、vendor prefix）
 ├── patches-uboot/        # U-Boot GCC 15 构建兼容补丁
+├── patches-uboot-mainline/ # mainline U-Boot v2026.10 的 Meson8b/OneCloud 移植
 ├── scripts/              # 工具链、initramfs、rootfs、U-Boot 辅助脚本
 └── logs/                 # 各阶段构建与校验日志（文本）
 ```
@@ -50,6 +51,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 
 ```bash
 ./build.sh                 # 构建内核、模块、DTB、initramfs、uImage
+BUILD_UBOOT_MAINLINE=1 ./build.sh  # 额外构建 mainline U-Boot proper 实验 payload
 PACKAGE=1 ./build.sh       # 构建后直接打包
 ./verify.sh                # 静态校验输出产物
 ```
@@ -82,6 +84,45 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
 - `patches-uboot/0001-u-boot-gcc15-build-compat.patch`：让 pinned U-Boot
   在 GCC 15 下可构建。注意：GCC15 重编的 SPL/DDR 初始化在实机上不可靠，
   实验镜像只替换 U-Boot proper payload，SPL/DDR 仍使用 Armbian 基线。
+- `patches-uboot-mainline/0001-mainline-uboot-meson8b-onecloud.patch`：
+  把 mainline U-Boot `v2026.10` 移植到 Meson8b/OneCloud（32 位平台、
+  OneCloud 板级代码、最小 DTS、`meson-mx-sdio` MMC 驱动、Meson6 timer、
+  vendor SPL 兼容 magic）。只替换 U-Boot proper，SPL/DDR 保持基线。
+
+## U-Boot 主线移植（实验）
+
+S805/Meson8b 从来没有进入 mainline U-Boot，`hzyitc/u-boot-onecloud` 的
+`onecloud` 分支也停在 2022-10-28。本工程新增了一条实验性的“混合引导链”：
+
+- **保留** 已验证的 vendor SPL/DDR 初始化（`4.bootloader.PARTITION` 前
+  32 KiB）和 `1.UBOOT_COMP.USB`，因此 USB 救砖路径不变；
+- **替换** U-Boot proper 为 mainline `v2026.10` 的 Meson8b 移植，新增
+  `MESON_M8B` 平台、OneCloud 板级代码、最小 U-Boot DTS、
+  `meson-mx-sdio` 轮询式 MMC 驱动和 Meson6 timer；
+- vendor SPL 会检查解压后 U-Boot 偏移 60 处的 `0x12345678`。补丁把这个值
+  放在 ARM 异常向量表的 padding word 中，所以 **不需要修改 SPL 二进制**。
+
+构建与校验：
+
+```bash
+./scripts/build-uboot-mainline.sh     # clone v2026.10、打补丁、构建并打包 payload
+UBOOT_MAINLINE_VARIANT=1 ./package.sh # 生成 -uboot-mainline.burn.img
+./scripts/verify-uboot-mainline.sh    # 静态校验 SPL/payload/magic/分区
+```
+
+产物在 `output/uboot-mainline/`（`u-boot-dtb.bin`、`u-boot-comp.bin`、
+`u-boot-hybrid-mainline.bin`、`System.map`、最终 `.config`）和
+`output/OneCloud-Linux-7.3.1-armhf-uboot-mainline.burn.img`。
+
+当前限制：
+
+- 只实现 eMMC（SDIO port C）启动；SD 卡、网口、USB、HDMI 尚未移植到
+  mainline U-Boot proper；
+- U-Boot 的 `bootcmd` 从 `mmc 0:1` 读取 `/boot.scr`，因此要求 FAT 启动分区
+  和现有 Armbian 布局保持一致；
+- **尚未在实机验证**。主镜像继续使用已验证的 vendor bootloader；在验证
+  通过前，请把 `-uboot-mainline.burn.img` 当作实验镜像，并保留串口/USB
+  救砖手段。
 
 ## USB（DWC2 host）
 
@@ -160,7 +201,9 @@ PACKAGE=1 ./build.sh       # 构建后直接打包
 - 内核：kernel.org Linux 7.3.1 stable
 - 根文件系统基线：[upleung/armbian-onecloud](https://github.com/upleung/armbian-onecloud)
   release `v2026.08.03-2135`（Armbian 26.08.0，Debian Bookworm ARMHF）
-- U-Boot：[hzyitc/u-boot-onecloud](https://github.com/hzyitc/u-boot-onecloud)
+- U-Boot（主镜像保持的已工作版本）：[hzyitc/u-boot-onecloud](https://github.com/hzyitc/u-boot-onecloud)
   commit `0038d741ed1c77a77570c3a6bf88fe6189c11733`
+- U-Boot proper（实验）：mainline [u-boot/u-boot](https://github.com/u-boot/u-boot)
+  tag `v2026.10` + `patches-uboot-mainline/0001-mainline-uboot-meson8b-onecloud.patch`
 - AmlImg：[hzyitc/AmlImg](https://github.com/hzyitc/AmlImg)
   commit `5ede4ed30b27c10187af5258f7e2f61f9ad71e1e`

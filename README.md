@@ -16,6 +16,10 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 > USB0 的 host 模式触发 PHY ACA/ID 检查导致 dwc2 probe 失败，以及 HDMI
 > 移植中的 HHI `ranges`、DRM bridge 分配 API 和 HHI 可选访问问题。
 > 详见 [BUILD_REPORT.md](BUILD_REPORT.md)。
+>
+> 另提供 mainline U-Boot v2026.10 的实验性 U-Boot proper 移植
+> （`-uboot-mainline` 线刷包）；SPL/DDR 仍使用已验证的 vendor 基线，
+> 尚未实机验证，详见下文“U-Boot 主线移植（实验）”。
 
 ## 文档
 
@@ -31,7 +35,7 @@ Meson8b）的构建工程，包含设备树与 U-Boot 补丁、内核配置、�
 .
 ├── build.sh              # 内核 / DTB / 模块 / initramfs / uImage 构建
 ├── package.sh            # 生成 .img、.burn.img、.xz 与 SHA256
-├── verify.sh             # 113 项静态校验（不写块设备）
+├── verify.sh             # 静态校验（含可选 mainline U-Boot 镜像）
 ├── config/
 │   ├── onecloud.fragment         # 叠加在 multi_v7_defconfig 上的内核配置
 │   ├── onecloud-7.3.1.config     # 最终完整内核配置

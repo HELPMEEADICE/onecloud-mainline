@@ -1,7 +1,7 @@
-name: Linux kernel auto prerelease
+name: Legacy firmware images (manual or PR only)
+# New automated releases with Debian/Arch upgrade packages use auto-release.yml.
+# Keep this workflow for explicit image-only rebuilds and PR integration tests.
 on:
-  schedule:
-    - cron: '23 */6 * * *'
   workflow_dispatch:
     inputs:
       version:

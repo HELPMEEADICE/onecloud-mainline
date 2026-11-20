@@ -61,7 +61,7 @@ jobs:
       PACKAGE: "1"
       BUILD_UBOOT: "0"
       UBOOT_VARIANT: "0"
-      ROOTFS_EXECUTOR: proot
+      ROOTFS_EXECUTOR: chroot
       XZ_LEVEL: "3"
     steps:
       - uses: actions/checkout@v4
@@ -80,9 +80,21 @@ jobs:
             bc binutils bison build-essential cpio curl device-tree-compiler dosfstools \
             dpkg-dev e2fsprogs fakeroot file flex git gnupg golang-go kmod libarchive-tools libssl-dev \
             mtools openssl patch perl proot python3 qemu-user-static rsync \
+            android-sdk-libsparse-utils \
             u-boot-tools util-linux xz-utils zstd
+      - name: Install pinned Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - name: Register ARMHF binfmt interpreter for APT chroot
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
       - name: Smoke-test Debian and pacman binary packaging
         run: bash tests/smoke-upgrade-packages.sh
+      - name: Smoke-test ARMHF APT with signature verification
+        run: |
+          bash scripts/smoke-rootfs-apt.sh
       - name: Validate upstream Linux source and signing key
         run: |
           bash scripts/fetch-kernel.sh "$KVER"
